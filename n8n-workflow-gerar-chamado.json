@@ -1,0 +1,215 @@
+{
+  "name": "Gerador de Chamado N2 - Webhook IA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gerar-chamado",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        160
+      ],
+      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000001",
+      "name": "Webhook - Gerar Chamado",
+      "webhookId": "gerar-chamado-post"
+    },
+    {
+      "parameters": {
+        "httpMethod": "OPTIONS",
+        "path": "gerar-chamado",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        400
+      ],
+      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000002",
+      "name": "Webhook - CORS Preflight",
+      "webhookId": "gerar-chamado-options"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "",
+        "options": {
+          "responseCode": 204,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        80,
+        400
+      ],
+      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000003",
+      "name": "Respond - CORS Preflight"
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "Você é um assistente especializado em suporte técnico N2 de integrações de e-commerce (marketplaces como Shopee, Mercado Livre, Amazon, ERP, OMS, hubs de integração etc). Você recebe o texto de uma conversa entre um atendente (agente) e um cliente/seller e deve extrair as informações necessárias para abrir um chamado técnico estruturado.\n\nExtraia EXATAMENTE os seguintes campos e responda SOMENTE com um objeto JSON válido, sem nenhum texto adicional, sem markdown, sem crases (```), sem comentários e sem explicações antes ou depois:\n\n{\n  \"cliente_nome\": \"Nome do cliente/seller mencionado na conversa\",\n  \"descricao_problema\": \"Descrição objetiva e profissional do problema relatado, em 2 a 4 frases, na terceira pessoa\",\n  \"exemplo_pedido\": \"Número de pedido, SKU ou exemplo concreto citado na conversa (ou 'Não informado' caso não haja)\",\n  \"testes_realizados\": \"Resumo dos testes e verificações já realizados pelo atendente durante o atendimento (ou 'Nenhum teste informado' caso não haja)\",\n  \"tema\": \"Categoria/tema do chamado, por exemplo: 'Hub · Shopee', 'ERP · Integração', 'Financeiro · Repasse' etc.\"\n}\n\nRegras obrigatórias:\n- Responda apenas o objeto JSON, nada antes ou depois dele.\n- Não invente informações que não estejam presentes na conversa.\n- Se um campo não puder ser identificado com segurança, preencha com uma string curta indicando isso (ex: 'Não informado').\n- Use linguagem profissional, objetiva e em português do Brasil."
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.body.conversa }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        80,
+        160
+      ],
+      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000004",
+      "name": "OpenAI - Extrair Dados do Chamado",
+      "credentials": {
+        "openAiApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Garante que a saída da IA seja um JSON válido e parseável,\n// mesmo que venha com blocos ```json, crases ou texto extra ao redor.\nconst item = $input.first().json;\n\nlet raw = item.message?.content\n  ?? item.choices?.[0]?.message?.content\n  ?? item.content\n  ?? item.text\n  ?? '';\n\nif (typeof raw !== 'string') {\n  raw = JSON.stringify(raw);\n}\n\n// Remove blocos de código markdown e crases soltas\nlet cleaned = raw\n  .replace(/```json/gi, '')\n  .replace(/```/g, '')\n  .replace(/`/g, '')\n  .trim();\n\n// Isola apenas o objeto JSON mais externo, caso haja texto ao redor\nconst firstBrace = cleaned.indexOf('{');\nconst lastBrace = cleaned.lastIndexOf('}');\nif (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {\n  cleaned = cleaned.substring(firstBrace, lastBrace + 1);\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  parsed = {\n    cliente_nome: '',\n    descricao_problema: '',\n    exemplo_pedido: '',\n    testes_realizados: '',\n    tema: '',\n    erro: 'Não foi possível interpretar a resposta da IA como JSON.',\n    resposta_bruta: raw\n  };\n}\n\nconst resultado = {\n  cliente_nome: parsed.cliente_nome ?? '',\n  descricao_problema: parsed.descricao_problema ?? '',\n  exemplo_pedido: parsed.exemplo_pedido ?? '',\n  testes_realizados: parsed.testes_realizados ?? '',\n  tema: parsed.tema ?? ''\n};\n\nreturn [{ json: resultado }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        160
+      ],
+      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000005",
+      "name": "Sanitizar JSON da IA"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        160
+      ],
+      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000006",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "Webhook - Gerar Chamado": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Extrair Dados do Chamado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - CORS Preflight": {
+      "main": [
+        [
+          {
+            "node": "Respond - CORS Preflight",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Extrair Dados do Chamado": {
+      "main": [
+        [
+          {
+            "node": "Sanitizar JSON da IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitizar JSON da IA": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "n2-assist-gerador-chamado"
+  }
+}
