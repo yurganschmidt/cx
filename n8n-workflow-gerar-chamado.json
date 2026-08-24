@@ -13,7 +13,7 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -420,
+        -680,
         160
       ],
       "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000001",
@@ -32,8 +32,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -420,
-        420
+        -680,
+        460
       ],
       "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000002",
       "name": "Webhook - CORS Preflight",
@@ -66,68 +66,74 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        -160,
-        420
+        -420,
+        460
       ],
       "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000003",
       "name": "Respond - CORS Preflight"
     },
     {
       "parameters": {
-        "jsCode": "// Monta o corpo da requisição para a API REST do Gemini\n// (generateContent), a partir do texto da conversa recebido no webhook.\nconst conversa = $json.body?.conversa ?? '';\n\nconst systemPrompt = `Você é um assistente especializado em suporte técnico N2 de integrações de e-commerce (marketplaces como Shopee, Mercado Livre, Amazon, ERP, OMS, hubs de integração etc). Você recebe o texto de uma conversa entre um atendente (agente) e um cliente/seller e deve extrair as informações necessárias para abrir um chamado técnico estruturado.\n\nExtraia EXATAMENTE os seguintes campos e responda SOMENTE com um objeto JSON válido, sem nenhum texto adicional, sem markdown, sem crases, sem comentários e sem explicações antes ou depois:\n\n{\n  \"cliente_nome\": \"Nome do cliente/seller mencionado na conversa\",\n  \"descricao_problema\": \"Descrição objetiva e profissional do problema relatado, em 2 a 4 frases, na terceira pessoa\",\n  \"exemplo_pedido\": \"Número de pedido, SKU ou exemplo concreto citado na conversa (ou 'Não informado' caso não haja)\",\n  \"testes_realizados\": \"Resumo dos testes e verificações já realizados pelo atendente durante o atendimento (ou 'Nenhum teste informado' caso não haja)\",\n  \"tema\": \"Categoria/tema do chamado, por exemplo: 'Hub · Shopee', 'ERP · Integração', 'Financeiro · Repasse' etc.\"\n}\n\nRegras obrigatórias:\n- Responda apenas o objeto JSON, nada antes ou depois dele.\n- Não invente informações que não estejam presentes na conversa.\n- Se um campo não puder ser identificado com segurança, preencha com uma string curta indicando isso (ex: 'Não informado').\n- Use linguagem profissional, objetiva e em português do Brasil.`;\n\nconst body = {\n  contents: [\n    {\n      role: 'user',\n      parts: [\n        { text: conversa }\n      ]\n    }\n  ],\n  systemInstruction: {\n    parts: [\n      { text: systemPrompt }\n    ]\n  },\n  generationConfig: {\n    temperature: 0.2,\n    responseMimeType: 'application/json'\n  }\n};\n\nreturn [{ json: body }];"
+        "promptType": "define",
+        "text": "={{ $json.body.conversa }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Você é um assistente especializado em suporte técnico N2 de integrações de e-commerce (marketplaces como Shopee, Mercado Livre, Amazon, ERP, OMS, hubs de integração etc). Você recebe o texto de uma conversa entre um atendente (agente) e um cliente/seller e deve extrair as informações necessárias para abrir um chamado técnico estruturado.\n\nExtraia os seguintes campos a partir da conversa:\n- cliente_nome: nome do cliente/seller mencionado na conversa.\n- descricao_problema: descrição objetiva e profissional do problema relatado, em 2 a 4 frases, na terceira pessoa.\n- exemplo_pedido: número de pedido, SKU ou exemplo concreto citado na conversa (ou 'Não informado' caso não haja).\n- testes_realizados: resumo dos testes e verificações já realizados pelo atendente durante o atendimento (ou 'Nenhum teste informado' caso não haja).\n- tema: categoria/tema do chamado, por exemplo 'Hub · Shopee', 'ERP · Integração', 'Financeiro · Repasse' etc.\n\nRegras obrigatórias:\n- Não invente informações que não estejam presentes na conversa.\n- Se um campo não puder ser identificado com segurança, preencha com uma string curta indicando isso (ex: 'Não informado').\n- Use linguagem profissional, objetiva e em português do Brasil.\n- Responda seguindo exatamente o formato solicitado pelo parser de saída, sem texto adicional."
+        }
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
       "position": [
-        -160,
+        -420,
         160
       ],
-      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000007",
-      "name": "Montar Payload Gemini"
+      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000008",
+      "name": "Agente - Extrair Dados do Chamado"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpQueryAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ $json }}",
-        "options": {}
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "temperature": 0.2
+        }
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
       "position": [
-        100,
-        160
+        -480,
+        380
       ],
-      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000004",
-      "name": "Gemini - Extrair Dados do Chamado",
+      "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000009",
+      "name": "Google Gemini Chat Model",
       "credentials": {
-        "httpQueryAuth": {
+        "googlePalmApi": {
           "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
-          "name": "Gemini API Key (Query Auth)"
+          "name": "Google Gemini(PaLM) Api account"
         }
       }
     },
     {
       "parameters": {
-        "jsCode": "// Garante que a saída da IA seja um JSON válido e parseável,\n// mesmo que venha com blocos ```json, crases ou texto extra ao redor.\n// Lê o formato de resposta da API REST do Gemini (candidates[0].content.parts[0].text)\n// e mantém alguns formatos alternativos como fallback de segurança.\nconst item = $input.first().json;\n\nif (item.error) {\n  return [{\n    json: {\n      cliente_nome: '',\n      descricao_problema: '',\n      exemplo_pedido: '',\n      testes_realizados: '',\n      tema: '',\n      erro: `Erro da API Gemini: ${item.error.message || JSON.stringify(item.error)}`\n    }\n  }];\n}\n\nlet raw = item.candidates?.[0]?.content?.parts?.[0]?.text\n  ?? item.text\n  ?? item.content?.parts?.[0]?.text\n  ?? item.message?.content\n  ?? item.choices?.[0]?.message?.content\n  ?? item.content\n  ?? '';\n\nif (typeof raw !== 'string') {\n  raw = JSON.stringify(raw);\n}\n\n// Remove blocos de código markdown e crases soltas\nlet cleaned = raw\n  .replace(/```json/gi, '')\n  .replace(/```/g, '')\n  .replace(/`/g, '')\n  .trim();\n\n// Isola apenas o objeto JSON mais externo, caso haja texto ao redor\nconst firstBrace = cleaned.indexOf('{');\nconst lastBrace = cleaned.lastIndexOf('}');\nif (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {\n  cleaned = cleaned.substring(firstBrace, lastBrace + 1);\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  parsed = {\n    cliente_nome: '',\n    descricao_problema: '',\n    exemplo_pedido: '',\n    testes_realizados: '',\n    tema: '',\n    erro: 'Não foi possível interpretar a resposta da IA como JSON.',\n    resposta_bruta: raw\n  };\n}\n\nconst resultado = {\n  cliente_nome: parsed.cliente_nome ?? '',\n  descricao_problema: parsed.descricao_problema ?? '',\n  exemplo_pedido: parsed.exemplo_pedido ?? '',\n  testes_realizados: parsed.testes_realizados ?? '',\n  tema: parsed.tema ?? ''\n};\n\nreturn [{ json: resultado }];"
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"cliente_nome\": \"João\",\n  \"descricao_problema\": \"João relatou que os pedidos da Shopee feitos na manhã de hoje não foram importados automaticamente para o ERP.\",\n  \"exemplo_pedido\": \"5156401561654654\",\n  \"testes_realizados\": \"Foi realizado um teste de importação manual, no qual o pedido foi importado corretamente.\",\n  \"tema\": \"Hub · Shopee\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -280,
+        380
+      ],
+      "id": "b1c9a1f0-1a11-4a2e-9b0a-00000000000a",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Garante que a saída do Agente seja um JSON válido e parseável.\n// Com o Structured Output Parser conectado, $json.output normalmente já\n// vem como objeto; este código também cobre o caso de vir como texto\n// (com blocos ```json, crases ou texto extra ao redor).\nconst item = $input.first().json;\n\nlet raw = item.output ?? item.text ?? item.content ?? '';\n\n// Se o parser já devolveu um objeto estruturado, usa direto\nif (raw && typeof raw === 'object' && !Array.isArray(raw)) {\n  return [{\n    json: {\n      cliente_nome: raw.cliente_nome ?? '',\n      descricao_problema: raw.descricao_problema ?? '',\n      exemplo_pedido: raw.exemplo_pedido ?? '',\n      testes_realizados: raw.testes_realizados ?? '',\n      tema: raw.tema ?? ''\n    }\n  }];\n}\n\nif (typeof raw !== 'string') {\n  raw = JSON.stringify(raw);\n}\n\n// Remove blocos de código markdown e crases soltas\nlet cleaned = raw\n  .replace(/```json/gi, '')\n  .replace(/```/g, '')\n  .replace(/`/g, '')\n  .trim();\n\n// Isola apenas o objeto JSON mais externo, caso haja texto ao redor\nconst firstBrace = cleaned.indexOf('{');\nconst lastBrace = cleaned.lastIndexOf('}');\nif (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {\n  cleaned = cleaned.substring(firstBrace, lastBrace + 1);\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  parsed = {\n    cliente_nome: '',\n    descricao_problema: '',\n    exemplo_pedido: '',\n    testes_realizados: '',\n    tema: '',\n    erro: 'Não foi possível interpretar a resposta da IA como JSON.',\n    resposta_bruta: raw\n  };\n}\n\nconst resultado = {\n  cliente_nome: parsed.cliente_nome ?? '',\n  descricao_problema: parsed.descricao_problema ?? '',\n  exemplo_pedido: parsed.exemplo_pedido ?? '',\n  testes_realizados: parsed.testes_realizados ?? '',\n  tema: parsed.tema ?? ''\n};\n\nreturn [{ json: resultado }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        360,
+        -160,
         160
       ],
       "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000005",
@@ -159,7 +165,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        600,
+        80,
         160
       ],
       "id": "b1c9a1f0-1a11-4a2e-9b0a-000000000006",
@@ -171,7 +177,7 @@
       "main": [
         [
           {
-            "node": "Montar Payload Gemini",
+            "node": "Agente - Extrair Dados do Chamado",
             "type": "main",
             "index": 0
           }
@@ -189,23 +195,34 @@
         ]
       ]
     },
-    "Montar Payload Gemini": {
+    "Agente - Extrair Dados do Chamado": {
       "main": [
         [
           {
-            "node": "Gemini - Extrair Dados do Chamado",
+            "node": "Sanitizar JSON da IA",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Gemini - Extrair Dados do Chamado": {
-      "main": [
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
         [
           {
-            "node": "Sanitizar JSON da IA",
-            "type": "main",
+            "node": "Agente - Extrair Dados do Chamado",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agente - Extrair Dados do Chamado",
+            "type": "ai_outputParser",
             "index": 0
           }
         ]
