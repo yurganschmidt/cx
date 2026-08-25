@@ -339,17 +339,16 @@
     padding:4px 22px 20px;
     border-top:1px solid var(--border-soft);
   }
-  .theme-chip{
-    display:inline-flex;
+  .theme-row{
+    display:flex;
     align-items:center;
-    gap:6px;
-    background:rgba(10,78,228,0.07);
-    color:var(--blue);
+    gap:8px;
+    margin:14px 0 12px;
+  }
+  .theme-label{
     font-size:11px;
-    font-weight:700;
-    padding:5px 11px;
-    border-radius:100px;
-    margin:14px 0 10px;
+    font-weight:600;
+    color:var(--ink-3);
   }
   .practice-label{
     font-size:11px;
@@ -532,10 +531,10 @@ João: Entendi, mas os próximos pedidos continuam sem importar...</textarea>
         </div>
 
         <div class="practices-section" id="practicesSection">
-          <span class="theme-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12.01V2h10.01l8.58 8.58a2 2 0 0 1 0 2.83Z"/><circle cx="7" cy="7" r="1.2" fill="currentColor" stroke="none"/></svg>
-            <span id="themeText">Tema identificado: Hub · Shopee</span>
-          </span>
+          <div class="theme-row">
+            <span class="theme-label">Tema identificado</span>
+            <span class="badge badge-blue" id="themeText">Hub · Shopee</span>
+          </div>
 
           <div class="practice-label">Boas práticas para este tema</div>
           <div class="practice-box">
@@ -605,7 +604,7 @@ João: Entendi, mas os próximos pedidos continuam sem importar...</textarea>
     const suggestionText = document.getElementById('suggestionText');
 
     const tema = data.tema || 'Não identificado';
-    if(themeText) themeText.textContent = `Tema identificado: ${tema}`;
+    if(themeText) themeText.textContent = tema;
 
     const criterios = Array.isArray(data.criterios_tema) ? data.criterios_tema : [];
 
