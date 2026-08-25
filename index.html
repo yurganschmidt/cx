@@ -334,6 +334,84 @@
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
 
+  /* --- Boas práticas por tema (discreto) --- */
+  .practices-section{
+    padding:4px 22px 20px;
+    border-top:1px solid var(--border-soft);
+  }
+  .theme-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:rgba(10,78,228,0.07);
+    color:var(--blue);
+    font-size:11px;
+    font-weight:700;
+    padding:5px 11px;
+    border-radius:100px;
+    margin:14px 0 10px;
+  }
+  .practice-label{
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--ink-3);
+    margin-bottom:8px;
+  }
+  .practice-box{
+    background:var(--beige);
+    border:1px solid var(--border-soft);
+    border-radius:10px;
+    padding:12px 14px;
+  }
+  .practice-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink);
+    padding:4px 0;
+  }
+  .practice-item.warn{color:#96690F;}
+  .practice-icon{
+    width:15px;height:15px;
+    flex-shrink:0;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+    font-weight:800;
+    color:var(--white);
+    line-height:1;
+  }
+  .practice-icon.ok{background:var(--green);}
+  .practice-icon.warn{background:#F0A028;}
+  .practice-note{
+    font-size:10.5px;
+    color:var(--ink-3);
+    font-weight:500;
+    font-style:italic;
+    margin:10px 0 0;
+    line-height:1.45;
+  }
+  .suggestion-note{
+    display:flex;
+    gap:7px;
+    align-items:flex-start;
+    font-size:11px;
+    color:#96690F;
+    font-weight:600;
+    padding:9px 10px;
+    background:rgba(240,160,40,0.1);
+    border-radius:8px;
+    margin-top:10px;
+    line-height:1.4;
+  }
+  .suggestion-note svg{width:13px;height:13px; flex-shrink:0; margin-top:1px;}
+
   @media (max-width: 980px){
     .v1-grid{grid-template-columns:1fr;}
     .hero h1{font-size:2.1rem;}
@@ -453,6 +531,31 @@ João: Entendi, mas os próximos pedidos continuam sem importar...</textarea>
           </div>
         </div>
 
+        <div class="practices-section" id="practicesSection">
+          <span class="theme-chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12.01V2h10.01l8.58 8.58a2 2 0 0 1 0 2.83Z"/><circle cx="7" cy="7" r="1.2" fill="currentColor" stroke="none"/></svg>
+            <span id="themeText">Tema identificado: Hub · Shopee</span>
+          </span>
+
+          <div class="practice-label">Boas práticas para este tema</div>
+          <div class="practice-box">
+            <div id="practiceList">
+              <div class="practice-item"><span class="practice-icon ok">✓</span> Marketplace / integração</div>
+              <div class="practice-item"><span class="practice-icon ok">✓</span> SKU ou pedido de exemplo</div>
+              <div class="practice-item"><span class="practice-icon ok">✓</span> Mensagem de erro</div>
+              <div class="practice-item"><span class="practice-icon ok">✓</span> Comportamento atual x esperado</div>
+              <div class="practice-item"><span class="practice-icon ok">✓</span> Teste de importação</div>
+              <div class="practice-item warn"><span class="practice-icon warn">!</span> Data/hora da falha</div>
+            </div>
+            <p class="practice-note">A IA utiliza estes critérios como referência para verificar se as informações importantes foram fornecidas.</p>
+          </div>
+
+          <div class="suggestion-note" id="suggestionNote">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span id="suggestionText">Considere adicionar: Data/hora da falha antes de encaminhar ao N2.</span>
+          </div>
+        </div>
+
         <div class="result-actions">
           <div class="toast-wrap">
             <button class="btn btn-primary btn-sm copy-btn">
@@ -491,6 +594,56 @@ João: Entendi, mas os próximos pedidos continuam sem importar...</textarea>
     if(descEl) descEl.textContent = data.descricao_problema || '—';
     if(exEl) exEl.textContent = data.exemplo_pedido || '—';
     if(testesEl) testesEl.textContent = data.testes_realizados || '—';
+    populatePractices(data);
+  }
+
+  // ---- Boas práticas dinâmicas por tema ----
+  function populatePractices(data){
+    const themeText = document.getElementById('themeText');
+    const practiceList = document.getElementById('practiceList');
+    const suggestionNote = document.getElementById('suggestionNote');
+    const suggestionText = document.getElementById('suggestionText');
+
+    const tema = data.tema || 'Não identificado';
+    if(themeText) themeText.textContent = `Tema identificado: ${tema}`;
+
+    const criterios = Array.isArray(data.criterios_tema) ? data.criterios_tema : [];
+
+    if(practiceList){
+      practiceList.innerHTML = '';
+      if(criterios.length){
+        criterios.forEach(c => {
+          const row = document.createElement('div');
+          row.className = 'practice-item' + (c.atendido ? '' : ' warn');
+
+          const icon = document.createElement('span');
+          icon.className = 'practice-icon ' + (c.atendido ? 'ok' : 'warn');
+          icon.textContent = c.atendido ? '✓' : '!';
+
+          const label = document.createElement('span');
+          label.textContent = c.criterio;
+
+          row.appendChild(icon);
+          row.appendChild(label);
+          practiceList.appendChild(row);
+        });
+      } else {
+        const empty = document.createElement('div');
+        empty.className = 'practice-item';
+        empty.textContent = 'Nenhum critério específico identificado para este tema.';
+        practiceList.appendChild(empty);
+      }
+    }
+
+    const faltando = criterios.filter(c => !c.atendido);
+    if(suggestionNote && suggestionText){
+      if(faltando.length){
+        suggestionText.textContent = 'Considere adicionar: ' + faltando.map(c => c.criterio).join(', ') + ' antes de encaminhar ao N2.';
+        suggestionNote.style.display = 'flex';
+      } else {
+        suggestionNote.style.display = 'none';
+      }
+    }
   }
 
   async function runGeneration(){
