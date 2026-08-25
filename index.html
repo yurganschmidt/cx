@@ -495,11 +495,6 @@
             </button>
             <span class="toast">Chamado copiado!</span>
           </div>
-          <button class="btn btn-ghost btn-sm mock-action">Editar</button>
-          <button class="btn btn-outline btn-sm" id="regenBtn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-            Gerar novamente
-          </button>
         </div>
       </div>
     </div>
@@ -513,7 +508,6 @@
   // ---- Gerar chamado ----
   const generateBtn = document.getElementById('generateBtn');
   const resultCard = document.getElementById('resultCard');
-  const regenBtn = document.getElementById('regenBtn');
   const pasteArea = document.getElementById('pasteArea');
 
   function populateResult(data){
@@ -624,7 +618,6 @@
   }
 
   generateBtn.addEventListener('click', runGeneration);
-  regenBtn.addEventListener('click', runGeneration);
 
   // ---- Copiar ----
   function buildChamadoText(){
@@ -661,13 +654,6 @@
     });
   });
 
-  // ---- Ações simuladas (Editar, etc.) ----
-  document.querySelectorAll('.mock-action').forEach(btn => {
-    btn.addEventListener('click', () => {
-      btn.style.transform = 'scale(0.96)';
-      setTimeout(() => btn.style.transform = 'scale(1)', 120);
-    });
-  });
 </script>
 
 </body>
