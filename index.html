@@ -560,9 +560,9 @@ João: Entendi, mas os próximos pedidos continuam sem importar...</textarea>
           <div class="toast-wrap">
             <button class="btn btn-primary btn-sm copy-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              Copiar descrição
+              Copiar chamado
             </button>
-            <span class="toast">Descrição copiada!</span>
+            <span class="toast">Chamado copiado!</span>
           </div>
           <button class="btn btn-ghost btn-sm mock-action">Editar</button>
           <button class="btn btn-outline btn-sm" id="regenBtn">
@@ -696,9 +696,24 @@ João: Entendi, mas os próximos pedidos continuam sem importar...</textarea>
   regenBtn.addEventListener('click', runGeneration);
 
   // ---- Copiar ----
+  function buildChamadoText(){
+    const nome = document.getElementById('nameText').textContent;
+    const descricao = document.getElementById('descText').textContent;
+    const exemplo = document.getElementById('exemploText').textContent;
+    const testes = document.getElementById('testesText').textContent;
+
+    return [
+      `Cliente: ${nome}`,
+      `Descrição do problema: ${descricao}`,
+      `Exemplo: Pedido ${exemplo}`,
+      `Testes realizados: ${testes}`,
+      `Prints: Em anexo.`
+    ].join('\n\n');
+  }
+
   document.querySelectorAll('.copy-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const text = document.getElementById('descText').textContent;
+      const text = buildChamadoText();
       const wrap = btn.closest('.toast-wrap');
       const toast = wrap.querySelector('.toast');
 
