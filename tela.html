@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treinamento ao vivo — Olist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#001647;
+    --blue:#0A4EE4;
+    --teal:#8DD7D7;
+    --beige:#F2F0E8;
+    --ink:#001647;
+    --ink-2:#5a6480;
+    --ink-3:#8891a8;
+    --border:#dcdfe8;
+    --red:#E64E36;
+    --amber:#F0A028;
+    --green:#779E3D;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--navy);overflow:hidden;}
+  body{
+    font-family:'Plus Jakarta Sans', -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--teal); text-decoration:none;}
+  a:hover{color:#fff;}
+  button{font-family:inherit;}
+
+  @keyframes livepulse{0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.35; transform:scale(.82);}}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ---------- Stage (1280x720 slide, scaled to fit) ---------- */
+  #stageWrap{position:relative; width:100vw; height:100vh; background:var(--navy); overflow:hidden;}
+  #stage{
+    position:absolute; left:50%; top:50%; width:1280px; height:720px;
+    overflow:hidden; transform-origin:center center;
+    transform:translate(-50%,-50%) scale(1);
+  }
+  #stage .bg{position:absolute; inset:0; background:var(--navy);}
+  #stage .blob1{position:absolute; width:720px; height:720px; right:-220px; top:-260px; border-radius:50%; background:var(--blue); opacity:.5;}
+  #stage .blob2{position:absolute; width:420px; height:420px; left:-160px; bottom:-220px; border-radius:50%; background:var(--blue); opacity:.28;}
+  #stage .content{position:relative; width:100%; height:100%; display:flex; padding:56px 60px; gap:48px; align-items:center;}
+
+  .live-badge{display:inline-flex; align-items:center; gap:10px; align-self:flex-start; background:rgba(242,240,232,.12); border:1px solid rgba(242,240,232,.28); border-radius:999px; padding:8px 16px;}
+  .live-dot{width:9px; height:9px; border-radius:50%; background:var(--teal); animation:livepulse 1.6s ease-in-out infinite;}
+  .live-badge span.label{font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--beige);}
+
+  .stage-left{flex:1.15; display:flex; flex-direction:column; gap:26px; min-width:0;}
+  .stage-heading{display:flex; flex-direction:column; gap:14px;}
+  #stageTitle{margin:0; font-size:68px; line-height:1.02; font-weight:800; letter-spacing:-.03em; color:#fff; text-wrap:balance; word-break:break-word;}
+  .stage-sub{font-size:26px; font-weight:700; color:var(--teal);}
+  .stage-desc{font-size:22px; font-weight:500; line-height:1.35; color:rgba(242,240,232,.82); max-width:30ch;}
+
+  .info-box{display:flex; align-items:center; gap:16px; background:var(--beige); border-radius:18px; padding:20px 24px; max-width:560px;}
+  .info-box svg{flex:none;}
+  .info-box p{margin:0; font-size:19px; font-weight:600; line-height:1.35; color:var(--navy);}
+
+  .steps{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .step{display:flex; align-items:center; gap:12px;}
+  .step-num{width:30px; height:30px; border-radius:50%; background:var(--blue); color:#fff; font-size:15px; font-weight:800; display:grid; place-items:center;}
+  .step-num.done{background:var(--teal); color:var(--navy);}
+  .step span.label{font-size:17px; font-weight:600; color:var(--beige);}
+
+  .stage-right{flex:none; width:380px; background:rgba(242,240,232,.1); border:1px solid rgba(242,240,232,.22); border-radius:28px; padding:26px 24px; display:flex; flex-direction:column; align-items:center; gap:8px;}
+  .clock-label{font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:rgba(242,240,232,.7);}
+  #clock{font-size:76px; line-height:1; font-weight:800; letter-spacing:-.04em; color:var(--teal); font-variant-numeric:tabular-nums;}
+  .clock-sub{font-size:18px; font-weight:600; color:var(--beige); text-align:center;}
+  .progress-track{width:100%; height:8px; border-radius:999px; background:rgba(242,240,232,.18); overflow:hidden; margin-top:14px;}
+  #progressBar{height:100%; border-radius:999px; background:var(--teal); transition:width 1s linear; width:100%;}
+  #presentLabel{font-size:15px; font-weight:500; color:rgba(242,240,232,.65); text-align:center; margin-top:6px;}
+  .divider{width:100%; height:1px; background:rgba(242,240,232,.2); margin-top:16px;}
+  .qr-block{display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:14px;}
+  .qr-title{font-size:15px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--teal); text-align:center;}
+  .qr-card{background:#fff; border-radius:18px; padding:12px; line-height:0;}
+  #qrCanvas{display:block; width:196px; height:196px; image-rendering:pixelated;}
+  .qr-hint{font-size:14px; font-weight:500; color:rgba(242,240,232,.7); text-align:center;}
+
+  /* ---------- Session control bar ---------- */
+  #sessionBar{
+    position:fixed; top:0; left:0; right:0; z-index:30;
+    display:flex; flex-direction:column; gap:16px; padding:20px 24px;
+    background:rgba(242,240,232,.97); backdrop-filter:blur(6px);
+    box-shadow:0 10px 30px -18px rgba(0,22,71,.4);
+  }
+  .bar-row1{display:flex; flex-wrap:wrap; align-items:center; gap:16px 24px;}
+  .bar-title{font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--blue);}
+  .spacer{flex:1;}
+  .count-pill{display:flex; align-items:center; gap:10px; background:#fff; border:1.5px solid var(--teal); border-radius:14px; padding:10px 16px;}
+  #presenceCount{font-size:20px; font-weight:800; color:var(--navy); font-variant-numeric:tabular-nums;}
+  .count-pill span.label{font-size:13px; font-weight:600; color:var(--ink-2);}
+  .sync-status{display:flex; align-items:center; gap:8px;}
+  #syncDot{width:8px; height:8px; border-radius:50%; background:var(--amber);}
+  #syncLabel{font-size:13px; font-weight:600; color:var(--ink-2);}
+
+  .bar-row2{display:flex; flex-wrap:wrap; gap:24px 40px; align-items:flex-start;}
+  .bar-col{display:flex; flex-direction:column; gap:8px; min-width:0;}
+  .bar-col-label{font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3);}
+  .pill-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .pill{border:1.5px solid var(--border); border-radius:999px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; background:#fff; color:var(--ink-2); transition:background .15s ease, color .15s ease, border-color .15s ease;}
+  .pill.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+  .pill.duration.active{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .pill.custom{display:flex; align-items:center; gap:6px;}
+  .pill.custom.active{background:var(--teal); color:var(--navy); border-color:var(--teal);}
+
+  #customThemeWrap{display:none; flex-direction:column; gap:6px; max-width:320px; margin-top:2px;}
+  #customThemeWrap.show{display:flex;}
+  #customThemeInput{
+    width:100%; padding:10px 14px; border-radius:12px; border:1.5px solid var(--teal);
+    background:#fff; font-family:inherit; font-size:13.5px; font-weight:600; color:var(--navy);
+    outline:none;
+  }
+  #customThemeInput:focus{box-shadow:0 0 0 3px rgba(141,215,215,.35);}
+  .custom-hint{font-size:11.5px; font-weight:500; color:var(--ink-3); line-height:1.4;}
+
+  .actions-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .btn{border-radius:12px; padding:12px 18px; font-size:13px; font-weight:700; cursor:pointer; transition:opacity .15s ease, background .15s ease, color .15s ease, border-color .15s ease;}
+  .btn-outline-navy{border:1.5px solid var(--navy); background:#fff; color:var(--navy);}
+  .btn-outline-navy:hover{background:var(--navy); color:#fff;}
+  .btn-outline{border:1.5px solid var(--border); background:#fff; color:var(--ink-2);}
+  .btn-outline:hover{border-color:var(--blue); color:var(--blue);}
+  .btn-primary{border:none; padding:12px 22px; background:var(--blue); color:#fff; font-size:14px;}
+  .btn-primary:hover{opacity:.9;}
+
+  /* ---------- Mini controls (bar hidden) ---------- */
+  #miniControls{position:fixed; bottom:16px; right:16px; z-index:30; display:none; gap:8px;}
+  #miniControls.show{display:flex;}
+  .mini-btn{border:1px solid rgba(242,240,232,.3); border-radius:999px; padding:8px 14px; background:rgba(242,240,232,.12); color:rgba(242,240,232,.75); font-size:12px; font-weight:700; cursor:pointer;}
+  .mini-btn:hover{color:#fff;}
+
+  @media (max-width: 720px){
+    #stageWrap{overflow:auto;}
+  }
+</style>
+</head>
+<body>
+
+<div id="stageWrap">
+  <div id="stage">
+    <div class="bg"></div>
+    <div class="blob1"></div>
+    <div class="blob2"></div>
+
+    <div class="content">
+      <div class="stage-left">
+        <div class="live-badge">
+          <span class="live-dot"></span>
+          <span class="label">Treinamento ao vivo</span>
+        </div>
+
+        <div class="stage-heading">
+          <h1 id="stageTitle">Treinamento Olist</h1>
+          <div class="stage-sub">Estamos quase começando!</div>
+          <div class="stage-desc">Confirme sua presença para iniciarmos o treinamento.</div>
+        </div>
+
+        <div class="info-box">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0A4EE4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"></path><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21.07l1.5-1.5"></path></svg>
+          <p>Acesse o link enviado no <strong style="font-weight:800">chat do Meet</strong> e confirme sua presença informando o CNPJ da conta Olist.</p>
+        </div>
+
+        <div class="steps">
+          <div class="step"><span class="step-num">1</span><span class="label">Acesse o link</span></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(242,240,232,.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          <div class="step"><span class="step-num">2</span><span class="label">Informe o CNPJ da conta Olist</span></div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(242,240,232,.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          <div class="step"><span class="step-num done">3</span><span class="label">Confirme sua presença</span></div>
+        </div>
+      </div>
+
+      <div class="stage-right">
+        <div class="clock-label">Início em</div>
+        <div id="clock">03:00</div>
+        <div class="clock-sub">O treinamento começa em breve</div>
+        <div class="progress-track"><div id="progressBar"></div></div>
+        <div id="presentLabel">Aguardando confirmações</div>
+
+        <div class="divider"></div>
+
+        <div class="qr-block">
+          <div class="qr-title">Confirme sua presença</div>
+          <div class="qr-card"><canvas id="qrCanvas"></canvas></div>
+          <div class="qr-hint">Aponte a câmera do celular</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sessionBar">
+    <div class="bar-row1">
+      <span class="bar-title">Controle da sessão</span>
+      <div class="spacer"></div>
+      <div class="count-pill">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A4EE4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20"></path><circle cx="9.5" cy="7" r="3.5"></circle><path d="M17 11.5a3.5 3.5 0 1 0 0-7"></path><path d="M21 20v-1.5a4 4 0 0 0-3-3.87"></path></svg>
+        <span id="presenceCount">—</span>
+        <span class="label">presenças confirmadas</span>
+      </div>
+      <div class="sync-status">
+        <span id="syncDot"></span>
+        <span id="syncLabel">Conectando ao Sheets...</span>
+      </div>
+    </div>
+
+    <div class="bar-row2">
+      <div class="bar-col" style="flex:1;">
+        <span class="bar-col-label">Tema do treinamento</span>
+        <div class="pill-row" id="themeButtons"></div>
+        <div id="customThemeWrap">
+          <input id="customThemeInput" type="text" placeholder="Digite o tema personalizado" maxlength="80" autocomplete="off">
+          <span class="custom-hint">Esse texto aparece no título da tela de apresentação, no link/QR e é salvo na planilha.</span>
+        </div>
+      </div>
+
+      <div class="bar-col">
+        <span class="bar-col-label">Contagem regressiva</span>
+        <div class="pill-row" id="durationButtons"></div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="bar-col">
+        <span class="bar-col-label">Ações</span>
+        <div class="actions-row">
+          <button type="button" class="btn btn-outline-navy" id="timerToggleBtn">Iniciar contagem</button>
+          <button type="button" class="btn btn-outline" id="copyLinkBtn">Copiar link do cliente</button>
+          <button type="button" class="btn btn-primary" id="startBtn">Iniciar e ocultar controles</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="miniControls">
+    <button type="button" class="mini-btn" id="miniTimerBtn">Iniciar contagem</button>
+    <button type="button" class="mini-btn" id="miniShowBtn">controles</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // ---- Configuração ----
+  // Pode ser sobrescrita por ?api=..., ?lp=..., ?meet=... na URL.
+  const DEFAULT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzs5LICgxy2mUEWDDtg_DohVJDqeZAY9nGuDlaACw-iw1KilZ13icxIbypFF8Gmhf2rmA/exec';
+  const THEMES = ['Treinamento Olist', 'Integrações', 'Logística', 'Cadastro de produto', 'Expedição', 'Dia a Dia do ERP', 'Financeiro'];
+  const DURATIONS = [180, 300, 600];
+
+  const qs = new URLSearchParams(location.search);
+  const apiFromUrl = qs.get('api') || '';
+  const lpFromUrl = qs.get('lp') || '';
+  const meetFromUrl = qs.get('meet') || '';
+
+  const state = {
+    themeIdx: 0,
+    customMode: false,
+    customTheme: '',
+    seconds: 180,
+    total: 180,
+    running: false,
+    barVisible: true,
+    count: null,
+    synced: '',
+    copied: false
+  };
+
+  const temaParam = qs.get('tema');
+  if (temaParam) {
+    const i = THEMES.indexOf(temaParam);
+    if (i >= 0) { state.themeIdx = i; }
+    else { state.customMode = true; state.customTheme = temaParam; }
+  }
+  const minParam = parseInt(qs.get('min') || '', 10);
+  if (minParam > 0) { state.total = minParam * 60; state.seconds = minParam * 60; }
+
+  function endpoint(){ return (apiFromUrl || DEFAULT_ENDPOINT || '').trim(); }
+  function lpBase(){
+    const explicit = (lpFromUrl || '').trim();
+    if (explicit) return explicit;
+    return location.href.replace(/[^/]*$/, '') + 'presenca.html';
+  }
+  function activeThemeName(){
+    return state.customMode ? (state.customTheme.trim() || 'Tema personalizado') : THEMES[state.themeIdx];
+  }
+  function buildLpUrl(){
+    const base = lpBase();
+    let url = base + (base.includes('?') ? '&' : '?') + 'tema=' + encodeURIComponent(activeThemeName());
+    if (meetFromUrl) url += '&meet=' + encodeURIComponent(meetFromUrl);
+    return url;
+  }
+
+  // ---------------- Elements ----------------
+  const el = {
+    stage: document.getElementById('stage'),
+    stageTitle: document.getElementById('stageTitle'),
+    clock: document.getElementById('clock'),
+    progressBar: document.getElementById('progressBar'),
+    presentLabel: document.getElementById('presentLabel'),
+    qrCanvas: document.getElementById('qrCanvas'),
+    sessionBar: document.getElementById('sessionBar'),
+    presenceCount: document.getElementById('presenceCount'),
+    syncDot: document.getElementById('syncDot'),
+    syncLabel: document.getElementById('syncLabel'),
+    themeButtons: document.getElementById('themeButtons'),
+    customThemeWrap: document.getElementById('customThemeWrap'),
+    customThemeInput: document.getElementById('customThemeInput'),
+    durationButtons: document.getElementById('durationButtons'),
+    timerToggleBtn: document.getElementById('timerToggleBtn'),
+    copyLinkBtn: document.getElementById('copyLinkBtn'),
+    startBtn: document.getElementById('startBtn'),
+    miniControls: document.getElementById('miniControls'),
+    miniTimerBtn: document.getElementById('miniTimerBtn'),
+    miniShowBtn: document.getElementById('miniShowBtn')
+  };
+
+  // ---------------- Rendering ----------------
+  function renderThemeButtons(){
+    el.themeButtons.innerHTML = '';
+    THEMES.forEach((name, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill' + (!state.customMode && i === state.themeIdx ? ' active' : '');
+      btn.textContent = name;
+      btn.addEventListener('click', () => selectTheme(i));
+      el.themeButtons.appendChild(btn);
+    });
+    const custom = document.createElement('button');
+    custom.type = 'button';
+    custom.className = 'pill custom' + (state.customMode ? ' active' : '');
+    custom.innerHTML = '✏️ Personalizado';
+    custom.addEventListener('click', selectCustomTheme);
+    el.themeButtons.appendChild(custom);
+
+    el.customThemeWrap.classList.toggle('show', state.customMode);
+    if (el.customThemeInput.value !== state.customTheme) el.customThemeInput.value = state.customTheme;
+  }
+
+  function renderDurationButtons(){
+    el.durationButtons.innerHTML = '';
+    DURATIONS.forEach(v => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pill duration' + (state.total === v ? ' active' : '');
+      btn.textContent = (v / 60) + ' min';
+      btn.addEventListener('click', () => setDuration(v));
+      el.durationButtons.appendChild(btn);
+    });
+  }
+
+  function renderStageTitle(){
+    el.stageTitle.textContent = activeThemeName();
+  }
+
+  function renderClock(){
+    const mm = String(Math.floor(state.seconds / 60)).padStart(2, '0');
+    const ss = String(state.seconds % 60).padStart(2, '0');
+    el.clock.textContent = mm + ':' + ss;
+    el.progressBar.style.width = Math.round((state.seconds / state.total) * 100) + '%';
+  }
+
+  function renderPresence(){
+    el.presentLabel.textContent = state.count === null ? 'Aguardando confirmações' : state.count + ' presenças confirmadas';
+    el.presenceCount.textContent = state.count === null ? '—' : state.count;
+  }
+
+  function renderSync(){
+    const ep = endpoint();
+    el.syncDot.style.background = ep ? (state.synced ? '#779E3D' : '#F0A028') : '#E64E36';
+    el.syncLabel.textContent = ep ? (state.synced ? 'Sheets sincronizado às ' + state.synced : 'Conectando ao Sheets...') : 'Sem planilha conectada';
+  }
+
+  function renderActions(){
+    const label = state.running ? 'Pausar contagem' : (state.seconds === state.total ? 'Iniciar contagem' : 'Retomar contagem');
+    el.timerToggleBtn.textContent = label;
+    el.miniTimerBtn.textContent = label;
+    el.copyLinkBtn.textContent = state.copied ? 'Link copiado!' : 'Copiar link do cliente';
+  }
+
+  function renderBarVisibility(){
+    el.sessionBar.style.display = state.barVisible ? 'flex' : 'none';
+    el.miniControls.classList.toggle('show', !state.barVisible);
+  }
+
+  function renderAll(){
+    renderThemeButtons();
+    renderDurationButtons();
+    renderStageTitle();
+    renderClock();
+    renderPresence();
+    renderSync();
+    renderActions();
+    renderBarVisibility();
+    drawQR();
+  }
+
+  // ---------------- Actions ----------------
+  function selectTheme(i){
+    state.themeIdx = i;
+    state.customMode = false;
+    renderThemeButtons();
+    renderStageTitle();
+    drawQR();
+    fetchCount();
+  }
+
+  function selectCustomTheme(){
+    state.customMode = true;
+    renderThemeButtons();
+    renderStageTitle();
+    drawQR();
+    el.customThemeInput.focus();
+    if (state.customTheme.trim()) fetchCount();
+  }
+
+  let customDebounce = null;
+  el.customThemeInput.addEventListener('input', (e) => {
+    state.customTheme = e.target.value;
+    renderStageTitle();
+    drawQR();
+    clearTimeout(customDebounce);
+    customDebounce = setTimeout(() => { if (state.customTheme.trim()) fetchCount(); }, 600);
+  });
+
+  function setDuration(v){
+    state.total = v;
+    state.seconds = v;
+    state.running = false;
+    renderDurationButtons();
+    renderClock();
+    renderActions();
+  }
+
+  function toggleTimer(){
+    state.running = !state.running;
+    renderActions();
+  }
+
+  function startAndHide(){
+    state.barVisible = false;
+    state.running = true;
+    renderBarVisibility();
+    renderActions();
+    measure();
+  }
+
+  function showBar(){
+    state.barVisible = true;
+    renderBarVisibility();
+    measure();
+  }
+
+  function copyLink(){
+    const url = buildLpUrl();
+    if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+    state.copied = true;
+    renderActions();
+    setTimeout(() => { state.copied = false; renderActions(); }, 2000);
+  }
+
+  el.timerToggleBtn.addEventListener('click', toggleTimer);
+  el.miniTimerBtn.addEventListener('click', toggleTimer);
+  el.copyLinkBtn.addEventListener('click', copyLink);
+  el.startBtn.addEventListener('click', startAndHide);
+  el.miniShowBtn.addEventListener('click', showBar);
+
+  // ---------------- Timer tick ----------------
+  setInterval(() => {
+    if (state.running && state.seconds > 0) {
+      state.seconds -= 1;
+      renderClock();
+    }
+  }, 1000);
+
+  // ---------------- Attendance polling ----------------
+  let cbSeq = 0;
+  function fetchCount(){
+    const url = endpoint();
+    if (!url) return;
+    const tema = activeThemeName();
+    const cb = '__presCount' + (++cbSeq);
+    const s = document.createElement('script');
+    window[cb] = (d) => {
+      if (d && typeof d.count === 'number') {
+        state.count = d.count;
+        state.synced = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        renderPresence();
+        renderSync();
+      }
+      delete window[cb];
+      s.remove();
+    };
+    s.onerror = () => { delete window[cb]; s.remove(); };
+    s.src = url + (url.includes('?') ? '&' : '?') + 'action=count&callback=' + cb + '&tema=' + encodeURIComponent(tema) + '&_=' + Date.now();
+    document.body.appendChild(s);
+  }
+  setInterval(fetchCount, 8000);
+
+  // ---------------- Stage scaling ----------------
+  function measure(){
+    const barH = state.barVisible ? el.sessionBar.offsetHeight : 0;
+    const avail = Math.max(220, window.innerHeight - barH);
+    const scale = Math.min(window.innerWidth / 1280, avail / 720);
+    el.stage.style.top = 'calc(' + barH + 'px + (100vh - ' + barH + 'px) / 2)';
+    el.stage.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+  }
+  window.addEventListener('resize', measure);
+  if (window.ResizeObserver) {
+    new ResizeObserver(measure).observe(el.sessionBar);
+  }
+
+  // ---------------- QR code (gerador embutido, sem dependências) ----------------
+  const QR_TOTAL = [0, 26, 44, 70, 100, 134, 172, 196, 242, 292];
+  const QR_EC = [0, 7, 10, 15, 20, 26, 18, 20, 24, 30];
+  const QR_BLOCKS = [0, 1, 1, 1, 1, 1, 2, 2, 2, 2];
+  const QR_ALIGN = [null, [], [6, 18], [6, 22], [6, 26], [6, 30], [6, 34], [6, 22, 38], [6, 24, 42], [6, 26, 46]];
+  const QR_VERINFO = { 7: 0x07C94, 8: 0x085BC, 9: 0x09A99 };
+  const GEXP = new Uint8Array(512), GLOG = new Uint8Array(256);
+  (function () { let x = 1; for (let i = 0; i < 255; i++) { GEXP[i] = x; GLOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d; } for (let i = 255; i < 512; i++) GEXP[i] = GEXP[i - 255]; })();
+  function gmul(a, b) { return (a === 0 || b === 0) ? 0 : GEXP[GLOG[a] + GLOG[b]]; }
+  function rsPoly(n) { let p = [1]; for (let i = 0; i < n; i++) { const r = new Array(p.length + 1).fill(0); for (let j = 0; j < p.length; j++) { r[j] ^= p[j]; r[j + 1] ^= gmul(p[j], GEXP[i]); } p = r; } return p; }
+  function rsRemainder(data, ecLen) {
+    const gen = rsPoly(ecLen), res = new Array(data.length + ecLen).fill(0);
+    for (let i = 0; i < data.length; i++) res[i] = data[i];
+    for (let i = 0; i < data.length; i++) { const c = res[i]; if (!c) continue; for (let j = 0; j < gen.length; j++) res[i + j] ^= gmul(gen[j], c); }
+    return res.slice(data.length);
+  }
+  function qrFormatBits(fmt) { let rem = fmt << 10; for (let i = 14; i >= 10; i--) if ((rem >>> i) & 1) rem ^= 0x537 << (i - 10); return (((fmt << 10) | (rem & 0x3ff)) ^ 0x5412) & 0x7fff; }
+  function qrMask(m, i, j) {
+    switch (m) {
+      case 0: return (i + j) % 2 === 0;
+      case 1: return i % 2 === 0;
+      case 2: return j % 3 === 0;
+      case 3: return (i + j) % 3 === 0;
+      case 4: return (Math.floor(i / 2) + Math.floor(j / 3)) % 2 === 0;
+      case 5: return (i * j) % 2 + (i * j) % 3 === 0;
+      case 6: return ((i * j) % 2 + (i * j) % 3) % 2 === 0;
+      default: return ((i + j) % 2 + (i * j) % 3) % 2 === 0;
+    }
+  }
+  function qrPenalty(m) {
+    const n = m.length; let p = 0, dark = 0;
+    const runScore = (line) => { let s = 0, run = 1; for (let i = 1; i < n; i++) { if (line[i] === line[i - 1]) { run++; if (run === 5) s += 3; else if (run > 5) s += 1; } else run = 1; } return s; };
+    for (let i = 0; i < n; i++) { const row = m[i], col = []; for (let j = 0; j < n; j++) { col.push(m[j][i]); dark += row[j]; } p += runScore(row) + runScore(col); }
+    for (let i = 0; i < n - 1; i++) for (let j = 0; j < n - 1; j++) { const v = m[i][j]; if (v === m[i][j + 1] && v === m[i + 1][j] && v === m[i + 1][j + 1]) p += 3; }
+    const pat = [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0];
+    const hasPat = (get, start) => { for (let k = 0; k < 11; k++) if (get(start + k) !== pat[k]) return false; return true; };
+    const revPat = pat.slice().reverse();
+    const hasRev = (get, start) => { for (let k = 0; k < 11; k++) if (get(start + k) !== revPat[k]) return false; return true; };
+    for (let i = 0; i < n; i++) for (let j = 0; j <= n - 11; j++) {
+      const gr = (k) => m[i][k], gc = (k) => m[k][i];
+      if (hasPat(gr, j) || hasRev(gr, j)) p += 40;
+      if (hasPat(gc, j) || hasRev(gc, j)) p += 40;
+    }
+    p += Math.floor(Math.abs(dark * 100 / (n * n) - 50) / 5) * 10;
+    return p;
+  }
+  function qrMatrix(text) {
+    const bytes = new TextEncoder().encode(text);
+    let ver = 0;
+    for (let v = 1; v <= 9; v++) { if (bytes.length + 2 <= QR_TOTAL[v] - QR_EC[v] * QR_BLOCKS[v]) { ver = v; break; } }
+    if (!ver) return null;
+    const totalCw = QR_TOTAL[ver], ecLen = QR_EC[ver], nBlocks = QR_BLOCKS[ver];
+    const dataCw = totalCw - ecLen * nBlocks;
+    const bits = [];
+    const push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+    push(4, 4); push(bytes.length, 8);
+    for (const b of bytes) push(b, 8);
+    for (let i = 0; i < 4 && bits.length < dataCw * 8; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    const cw = [];
+    for (let i = 0; i < bits.length; i += 8) { let v = 0; for (let k = 0; k < 8; k++) v = (v << 1) | bits[i + k]; cw.push(v); }
+    const padPair = [0xEC, 0x11];
+    while (cw.length < dataCw) cw.push(padPair[(cw.length - bits.length / 8) % 2]);
+    const per = dataCw / nBlocks, dBlocks = [], eBlocks = [];
+    for (let b = 0; b < nBlocks; b++) { const d = cw.slice(b * per, (b + 1) * per); dBlocks.push(d); eBlocks.push(rsRemainder(d, ecLen)); }
+    const final = [];
+    for (let i = 0; i < per; i++) for (let b = 0; b < nBlocks; b++) final.push(dBlocks[b][i]);
+    for (let i = 0; i < ecLen; i++) for (let b = 0; b < nBlocks; b++) final.push(eBlocks[b][i]);
+    const allBits = [];
+    for (const c of final) for (let i = 7; i >= 0; i--) allBits.push((c >>> i) & 1);
+
+    const size = 17 + 4 * ver;
+    const base = [], res = [];
+    for (let i = 0; i < size; i++) { base.push(new Array(size).fill(0)); res.push(new Array(size).fill(0)); }
+    const setF = (r, c, v) => { if (r < 0 || c < 0 || r >= size || c >= size) return; base[r][c] = v; res[r][c] = 1; };
+    for (const [r0, c0] of [[0, 0], [0, size - 7], [size - 7, 0]]) {
+      for (let dr = -1; dr <= 7; dr++) for (let dc = -1; dc <= 7; dc++) {
+        const d = Math.max(Math.abs(dr - 3), Math.abs(dc - 3));
+        setF(r0 + dr, c0 + dc, (d <= 1 || d === 3) ? 1 : 0);
+      }
+    }
+    for (let i = 8; i < size - 8; i++) { setF(6, i, i % 2 === 0 ? 1 : 0); setF(i, 6, i % 2 === 0 ? 1 : 0); }
+    const al = QR_ALIGN[ver], last = al.length ? al[al.length - 1] : 0;
+    for (const r of al) for (const c of al) {
+      if ((r === 6 && c === 6) || (r === 6 && c === last) || (r === last && c === 6)) continue;
+      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
+        const d = Math.max(Math.abs(dr), Math.abs(dc));
+        setF(r + dr, c + dc, (d === 0 || d === 2) ? 1 : 0);
+      }
+    }
+    for (let i = 0; i < 9; i++) { res[8][i] = 1; res[i][8] = 1; }
+    for (let i = 0; i < 8; i++) { res[8][size - 1 - i] = 1; res[size - 1 - i][8] = 1; }
+    if (ver >= 7) {
+      const vb = QR_VERINFO[ver];
+      for (let i = 0; i < 18; i++) {
+        const bit = (vb >> i) & 1, a = Math.floor(i / 3), b = i % 3;
+        base[a][b + size - 11] = bit; res[a][b + size - 11] = 1;
+        base[b + size - 11][a] = bit; res[b + size - 11][a] = 1;
+      }
+    }
+    let bi = 0, up = true;
+    for (let c = size - 1; c > 0; c -= 2) {
+      if (c === 6) c = 5;
+      for (let i = 0; i < size; i++) {
+        const r = up ? size - 1 - i : i;
+        for (let k = 0; k < 2; k++) {
+          const cc = c - k;
+          if (res[r][cc]) continue;
+          base[r][cc] = bi < allBits.length ? allBits[bi++] : 0;
+        }
+      }
+      up = !up;
+    }
+    let best = null, bestScore = Infinity;
+    for (let mk = 0; mk < 8; mk++) {
+      const m = base.map(r => r.slice());
+      for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if (!res[i][j] && qrMask(mk, i, j)) m[i][j] ^= 1;
+      const fb = qrFormatBits((1 << 3) | mk);
+      for (let i = 0; i < 15; i++) {
+        const bit = (fb >> i) & 1;
+        if (i < 6) m[i][8] = bit; else if (i < 8) m[i + 1][8] = bit; else m[size - 15 + i][8] = bit;
+        if (i < 8) m[8][size - 1 - i] = bit; else if (i < 9) m[8][15 - i] = bit; else m[8][14 - i] = bit;
+      }
+      m[size - 8][8] = 1;
+      const sc = qrPenalty(m);
+      if (sc < bestScore) { bestScore = sc; best = m; }
+    }
+    return best;
+  }
+
+  let qrDrawnFor = '';
+  function drawQR(){
+    const url = buildLpUrl();
+    if (url === qrDrawnFor) return;
+    const mods = qrMatrix(url);
+    if (!mods) return;
+    const n = mods.length, quiet = 4, s = 8, px = (n + quiet * 2) * s;
+    el.qrCanvas.width = px; el.qrCanvas.height = px;
+    const g = el.qrCanvas.getContext('2d');
+    g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, px, px);
+    g.fillStyle = '#001647';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (mods[r][c]) g.fillRect((c + quiet) * s, (r + quiet) * s, s, s);
+    qrDrawnFor = url;
+  }
+
+  // ---------------- Init ----------------
+  renderAll();
+  measure();
+  requestAnimationFrame(measure);
+  fetchCount();
+})();
+</script>
+
+</body>
+</html>

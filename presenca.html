@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirme sua presença — Treinamento Olist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#001647;
+    --blue:#0A4EE4;
+    --teal:#8DD7D7;
+    --beige:#F2F0E8;
+    --ink:#001647;
+    --ink-2:#5a6480;
+    --ink-3:#8891a8;
+    --border:#dcdfe8;
+    --red:#E64E36;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    min-height:100vh;
+    font-family:'Plus Jakarta Sans', -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    background:var(--blue);
+    position:relative;
+    overflow-x:hidden;
+    display:flex; align-items:center; justify-content:center;
+    padding:clamp(12px, 3vw, 24px);
+  }
+  body::before{content:'';position:fixed;width:420px;height:420px;border-radius:50%;background:var(--teal);opacity:.3;right:-140px;top:-170px;}
+  body::after{content:'';position:fixed;width:300px;height:300px;border-radius:50%;background:var(--navy);opacity:.35;left:-120px;bottom:-140px;}
+
+  @keyframes shake{0%,100%{transform:translateX(0);} 25%{transform:translateX(-4px);} 75%{transform:translateX(4px);}}
+  @keyframes popin{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .card{
+    position:relative; width:100%; max-width:540px; background:#fff; border-radius:26px;
+    padding:clamp(24px,5vw,40px) clamp(20px,5vw,36px) clamp(26px,5vw,42px);
+    box-shadow:0 26px 60px -30px rgba(0,22,71,.55);
+    display:flex; flex-direction:column; gap:clamp(16px,3vw,24px);
+    z-index:1;
+  }
+  .badge{display:inline-flex; align-self:flex-start; align-items:center; gap:8px; background:var(--teal); border-radius:999px; padding:8px 16px;}
+  .badge-dot{width:8px; height:8px; border-radius:50%; background:var(--navy);}
+  .badge span.label{font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--navy);}
+
+  h1{margin:0; font-size:clamp(28px,7.5vw,38px); line-height:1.06; font-weight:800; letter-spacing:-.03em; color:var(--navy);}
+  h1 .accent{color:var(--blue);}
+  p{margin:0; font-size:clamp(15px,4vw,18px); line-height:1.45; font-weight:500; color:var(--ink-2);}
+
+  #formView{display:flex; flex-direction:column; gap:clamp(16px,3.5vw,24px);}
+  .field{display:flex; flex-direction:column; gap:10px;}
+  label{font-size:14px; font-weight:700; color:var(--navy);}
+  #cnpj{
+    width:100%; padding:clamp(14px,3.5vw,18px) clamp(16px,4vw,20px);
+    border-radius:16px; border:2px solid var(--border); background:#fff;
+    font-size:clamp(19px,5vw,22px); font-weight:600; color:var(--navy);
+    outline:none; font-variant-numeric:tabular-nums;
+    transition:border-color .18s ease, box-shadow .18s ease;
+  }
+  #cnpj:focus{box-shadow:0 0 0 4px rgba(10,78,228,.14);}
+  #cnpj.error{border-color:var(--red);}
+  #cnpj.complete{border-color:var(--blue);}
+
+  .field-error{display:none; align-items:center; gap:8px; animation:shake .35s ease;}
+  .field-error.show{display:flex;}
+  .field-error span{font-size:15px; font-weight:600; color:var(--red);}
+  .field-hint{font-size:14px; font-weight:500; color:var(--ink-3);}
+
+  #submitBtn{
+    width:100%; border:none; border-radius:16px; padding:clamp(16px,4vw,20px) 24px;
+    font-family:inherit; font-size:clamp(16px,4.2vw,18px); font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:12px;
+    background:var(--border); color:#a7adbe; cursor:not-allowed;
+    transition:transform .15s ease, background .18s ease, box-shadow .18s ease;
+  }
+  #submitBtn.ready{background:var(--blue); color:#fff; cursor:pointer;}
+  #submitBtn.ready:hover{box-shadow:0 12px 26px -12px rgba(10,78,228,.6);}
+  #submitBtn:active{transform:scale(.99);}
+  .spinner{display:none; width:20px; height:20px; border-radius:50%; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin .7s linear infinite;}
+  #submitBtn.loading .spinner{display:inline-block;}
+
+  .privacy{display:flex; align-items:center; gap:8px;}
+  .privacy span{font-size:13px; font-weight:500; color:var(--ink-3);}
+
+  #successView{display:none; flex-direction:column; align-items:flex-start; gap:clamp(16px,3.5vw,22px); animation:popin .4s cubic-bezier(.2,.8,.2,1);}
+  #successView.show{display:flex;}
+  .check-circle{width:clamp(64px,16vw,84px); height:clamp(64px,16vw,84px); border-radius:50%; background:var(--teal); display:grid; place-items:center;}
+  .success-cnpj{display:flex; align-items:center; gap:10px; background:var(--beige); border:1.5px solid var(--teal); border-radius:12px; padding:12px 16px;}
+  .success-cnpj span:first-child{font-size:14px; font-weight:600; color:var(--ink-2);}
+  .success-cnpj span:last-child{font-size:15px; font-weight:700; color:var(--navy); font-variant-numeric:tabular-nums;}
+  #backToMeet{
+    width:100%; box-sizing:border-box; text-align:center; text-decoration:none;
+    border-radius:16px; padding:clamp(16px,4vw,20px) 24px; background:var(--blue); color:#fff;
+    font-size:clamp(16px,4.2vw,18px); font-weight:700;
+    transition:box-shadow .18s ease, transform .15s ease;
+  }
+  #backToMeet:hover{box-shadow:0 12px 26px -12px rgba(10,78,228,.6); color:#fff;}
+  #backToMeet:active{transform:scale(.99);}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="badge">
+    <span class="badge-dot"></span>
+    <span class="label">Treinamento Olist</span>
+  </div>
+
+  <div id="formView">
+    <div>
+      <h1>Confirme sua <span class="accent">presença</span></h1>
+      <p style="margin-top:10px">Informe o CNPJ da conta Olist para registrar sua participação no <strong style="font-weight:700; color:var(--navy)">treinamento coletivo da Olist</strong> que está acontecendo agora.</p>
+    </div>
+
+    <div class="field">
+      <label for="cnpj">CNPJ</label>
+      <input id="cnpj" type="text" inputmode="numeric" autocomplete="off" placeholder="Digite o CNPJ da conta Olist">
+      <div class="field-error" id="fieldError">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E64E36" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v4.5M12 16h.01"></path></svg>
+        <span id="errorMsg"></span>
+      </div>
+      <div class="field-hint" id="fieldHint">Somente números. Ex.: 12.345.678/0001-95</div>
+    </div>
+
+    <button type="button" id="submitBtn">
+      <span class="spinner"></span>
+      <span id="submitLabel">Confirmar minha presença</span>
+    </button>
+
+    <div class="privacy">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8891a8" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" width="16" height="11" rx="2.5"></rect><path d="M8 10V7.5a4 4 0 0 1 8 0V10"></path></svg>
+      <span>Usamos o CNPJ apenas para registrar sua presença.</span>
+    </div>
+  </div>
+
+  <div id="successView">
+    <div class="check-circle">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#001647" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+    </div>
+    <div>
+      <h1>Presença confirmada!</h1>
+      <p style="margin-top:10px">Sua participação foi registrada com sucesso.</p>
+      <p style="margin-top:6px; font-weight:700; color:var(--navy)">Agora é só voltar para o Meet. O treinamento vai começar.</p>
+    </div>
+    <div class="success-cnpj">
+      <span>CNPJ</span>
+      <span id="successCnpj"></span>
+    </div>
+    <a href="https://meet.google.com/" id="backToMeet">Voltar para o Meet</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const DEFAULT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzs5LICgxy2mUEWDDtg_DohVJDqeZAY9nGuDlaACw-iw1KilZ13icxIbypFF8Gmhf2rmA/exec';
+
+  const qs = new URLSearchParams(location.search);
+  const tema = qs.get('tema') || '';
+  const meetFromUrl = qs.get('meet') || '';
+  const apiFromUrl = qs.get('api') || '';
+
+  document.getElementById('backToMeet').href = meetFromUrl || 'https://meet.google.com/';
+
+  function onlyDigits(v){ return (v || '').replace(/\D/g, '').slice(0, 14); }
+  function mask(d){
+    let o = d.slice(0, 2);
+    if (d.length > 2) o += '.' + d.slice(2, 5);
+    if (d.length > 5) o += '.' + d.slice(5, 8);
+    if (d.length > 8) o += '/' + d.slice(8, 12);
+    if (d.length > 12) o += '-' + d.slice(12, 14);
+    return o;
+  }
+  function validCnpj(d){
+    if (d.length !== 14) return false;
+    if (/^(\d)\1+$/.test(d)) return false;
+    const calc = (len) => {
+      let sum = 0, pos = len - 7;
+      for (let i = 0; i < len; i++) { sum += d[i] * pos--; if (pos < 2) pos = 9; }
+      const r = sum % 11;
+      return r < 2 ? 0 : 11 - r;
+    };
+    return calc(12) === +d[12] && calc(13) === +d[13];
+  }
+
+  const cnpjInput = document.getElementById('cnpj');
+  const submitBtn = document.getElementById('submitBtn');
+  const submitLabel = document.getElementById('submitLabel');
+  const fieldError = document.getElementById('fieldError');
+  const errorMsg = document.getElementById('errorMsg');
+  const fieldHint = document.getElementById('fieldHint');
+  const formView = document.getElementById('formView');
+  const successView = document.getElementById('successView');
+  const successCnpj = document.getElementById('successCnpj');
+
+  let status = 'idle';
+
+  function updateFieldState(){
+    const digits = onlyDigits(cnpjInput.value);
+    const complete = digits.length === 14;
+    cnpjInput.classList.toggle('complete', complete && status !== 'error');
+    cnpjInput.classList.toggle('error', status === 'error');
+    fieldError.classList.toggle('show', status === 'error');
+    fieldHint.style.display = status === 'error' ? 'none' : 'block';
+    submitBtn.classList.toggle('ready', complete && status !== 'loading');
+    submitBtn.disabled = !complete || status === 'loading';
+    submitBtn.style.cursor = (!complete || status === 'loading') ? 'not-allowed' : 'pointer';
+  }
+
+  cnpjInput.addEventListener('input', (e) => {
+    e.target.value = mask(onlyDigits(e.target.value));
+    status = 'idle';
+    updateFieldState();
+  });
+  cnpjInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  submitBtn.addEventListener('click', submit);
+
+  function jsonp(params){
+    return new Promise((resolve, reject) => {
+      const url = (apiFromUrl || DEFAULT_ENDPOINT || '').trim();
+      if (!url) return resolve({ ok: true, offline: true });
+      const cb = '__lpcb' + (jsonp._seq = (jsonp._seq || 0) + 1);
+      const s = document.createElement('script');
+      const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 12000);
+      const cleanup = () => { clearTimeout(timer); delete window[cb]; s.remove(); };
+      window[cb] = (d) => { cleanup(); resolve(d || {}); };
+      s.onerror = () => { cleanup(); reject(new Error('rede')); };
+      const qsStr = Object.keys(params).map(k => k + '=' + encodeURIComponent(params[k])).join('&');
+      s.src = url + (url.includes('?') ? '&' : '?') + qsStr + '&callback=' + cb + '&_=' + Date.now();
+      document.body.appendChild(s);
+    });
+  }
+
+  function submit(){
+    const d = onlyDigits(cnpjInput.value);
+    if (!validCnpj(d)) {
+      status = 'error';
+      errorMsg.textContent = d.length < 14 ? 'CNPJ incompleto. Informe os 14 dígitos.' : 'CNPJ inválido. Confira os números.';
+      updateFieldState();
+      return;
+    }
+    status = 'loading';
+    submitBtn.classList.add('loading');
+    submitLabel.textContent = 'Confirmando...';
+    updateFieldState();
+
+    const started = Date.now();
+    const cnpjMasked = mask(d);
+
+    jsonp({ action: 'save', cnpj: cnpjMasked, tema: tema || 'Não informado' }).then((res) => {
+      const wait = Math.max(0, 700 - (Date.now() - started));
+      if (res && res.ok === false) {
+        status = 'error';
+        errorMsg.textContent = 'Não conseguimos registrar agora. Tente novamente.';
+        submitBtn.classList.remove('loading');
+        submitLabel.textContent = 'Confirmar minha presença';
+        updateFieldState();
+        return;
+      }
+      setTimeout(() => {
+        successCnpj.textContent = cnpjMasked;
+        formView.style.display = 'none';
+        successView.classList.add('show');
+      }, wait);
+    }).catch(() => {
+      status = 'error';
+      errorMsg.textContent = 'Falha de conexão. Verifique a internet e tente novamente.';
+      submitBtn.classList.remove('loading');
+      submitLabel.textContent = 'Confirmar minha presença';
+      updateFieldState();
+    });
+  }
+
+  updateFieldState();
+})();
+</script>
+
+</body>
+</html>
