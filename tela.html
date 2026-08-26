@@ -46,6 +46,8 @@
   #stage .blob2{position:absolute; width:420px; height:420px; left:-160px; bottom:-220px; border-radius:50%; background:var(--blue); opacity:.28;}
   #stage .content{position:relative; width:100%; height:100%; display:flex; padding:56px 60px; gap:48px; align-items:center;}
 
+  .brand-logo{position:absolute; top:32px; left:60px; z-index:2; height:30px; width:auto; display:block;}
+
   .live-badge{display:inline-flex; align-items:center; gap:10px; align-self:flex-start; background:rgba(242,240,232,.12); border:1px solid rgba(242,240,232,.28); border-radius:999px; padding:8px 16px;}
   .live-dot{width:9px; height:9px; border-radius:50%; background:var(--teal); animation:livepulse 1.6s ease-in-out infinite;}
   .live-badge span.label{font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--beige);}
@@ -97,17 +99,18 @@
   #syncDot{width:8px; height:8px; border-radius:50%; background:var(--amber);}
   #syncLabel{font-size:13px; font-weight:600; color:var(--ink-2);}
 
+  .bar-row-theme{display:flex; flex-direction:column; gap:10px; padding-bottom:16px; margin-bottom:4px; border-bottom:1px solid var(--border);}
   .bar-row2{display:flex; flex-wrap:wrap; gap:24px 40px; align-items:flex-start;}
   .bar-col{display:flex; flex-direction:column; gap:8px; min-width:0;}
   .bar-col-label{font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3);}
-  .pill-row{display:flex; flex-wrap:wrap; gap:8px;}
-  .pill{border:1.5px solid var(--border); border-radius:999px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; background:#fff; color:var(--ink-2); transition:background .15s ease, color .15s ease, border-color .15s ease;}
+  .pill-row{display:flex; flex-wrap:wrap; gap:8px 10px;}
+  .pill{border:1.5px solid var(--border); border-radius:999px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; background:#fff; color:var(--ink-2); transition:background .15s ease, color .15s ease, border-color .15s ease; white-space:nowrap;}
   .pill.active{background:var(--blue); color:#fff; border-color:var(--blue);}
   .pill.duration.active{background:var(--navy); color:#fff; border-color:var(--navy);}
-  .pill.custom{display:flex; align-items:center; gap:6px;}
-  .pill.custom.active{background:var(--teal); color:var(--navy); border-color:var(--teal);}
+  .pill.custom{display:flex; align-items:center; gap:6px; border-style:dashed;}
+  .pill.custom.active{background:var(--teal); color:var(--navy); border-color:var(--teal); border-style:solid;}
 
-  #customThemeWrap{display:none; flex-direction:column; gap:6px; max-width:320px; margin-top:2px;}
+  #customThemeWrap{display:none; flex-direction:column; gap:6px; max-width:360px; margin-top:2px;}
   #customThemeWrap.show{display:flex;}
   #customThemeInput{
     width:100%; padding:10px 14px; border-radius:12px; border:1.5px solid var(--teal);
@@ -144,6 +147,14 @@
     <div class="bg"></div>
     <div class="blob1"></div>
     <div class="blob2"></div>
+
+    <svg class="brand-logo" viewBox="0 0 60 34" xmlns="http://www.w3.org/2000/svg" aria-label="Olist" role="img">
+      <text x="0" y="27" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="28" letter-spacing="-0.5" fill="#FFFFFF">olist</text>
+      <g transform="translate(23,0)">
+        <circle cx="5.5" cy="5.5" r="5.5" fill="#FFFFFF"/>
+        <path d="M0 5.5a5.5 5.5 0 0 0 11 0Z" fill="#E64E36"/>
+      </g>
+    </svg>
 
     <div class="content">
       <div class="stage-left">
@@ -205,16 +216,16 @@
       </div>
     </div>
 
-    <div class="bar-row2">
-      <div class="bar-col" style="flex:1;">
-        <span class="bar-col-label">Tema do treinamento</span>
-        <div class="pill-row" id="themeButtons"></div>
-        <div id="customThemeWrap">
-          <input id="customThemeInput" type="text" placeholder="Digite o tema personalizado" maxlength="80" autocomplete="off">
-          <span class="custom-hint">Esse texto aparece no título da tela de apresentação, no link/QR e é salvo na planilha.</span>
-        </div>
+    <div class="bar-row-theme">
+      <span class="bar-col-label">Tema do treinamento</span>
+      <div class="pill-row" id="themeButtons"></div>
+      <div id="customThemeWrap">
+        <input id="customThemeInput" type="text" placeholder="Digite o tema personalizado" maxlength="80" autocomplete="off">
+        <span class="custom-hint">Esse texto aparece no título da tela de apresentação, no link/QR e é salvo na planilha.</span>
       </div>
+    </div>
 
+    <div class="bar-row2">
       <div class="bar-col">
         <span class="bar-col-label">Contagem regressiva</span>
         <div class="pill-row" id="durationButtons"></div>
