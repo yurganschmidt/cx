@@ -194,6 +194,25 @@ function contextoUsuario_() {
   return { email: email, admin: ehAdmin_(email) };
 }
 
+/**
+ * Nome para exibir no cabeçalho ("Olá, ..."). Procura, entre as linhas da
+ * planilha, alguma em que "Analista (e-mail)" bata com o e-mail de quem está
+ * acessando e usa o nome daquela linha. Se não achar (ex.: um admin que não
+ * é analista na planilha), deriva um nome a partir da parte local do e-mail.
+ */
+function nomeExibicao_(ctx, itensCache) {
+  if (!ctx.email) return '';
+
+  var itens = itensCache || lerLinhas_();
+  var propria = itens.filter(function (it) { return norm_(it.email) === ctx.email; })[0];
+  if (propria && propria.nome) return propria.nome;
+
+  var local = ctx.email.split('@')[0];
+  var partes = local.split(/[._-]+/).filter(Boolean);
+  if (!partes.length) return ctx.email;
+  return partes.map(function (p) { return p.charAt(0).toUpperCase() + p.slice(1); }).join(' ');
+}
+
 /* ========================= leitura ========================= */
 
 /**
@@ -372,13 +391,15 @@ function getMeta() {
     var sheet = getSheet_();
     var ctx = contextoUsuario_();
 
-    var linhas;
-    if (!ctx.email) {
-      linhas = 0;
-    } else if (ctx.admin) {
-      linhas = Math.max(0, sheet.getLastRow() - 1);
-    } else {
-      linhas = lerLinhas_().filter(function (it) { return norm_(it.email) === ctx.email; }).length;
+    var linhas = 0, nome = '';
+    if (ctx.email) {
+      // Lê a planilha inteira uma vez só, e reaproveita tanto para achar o
+      // nome do usuário (nomeExibicao_) quanto, quando não é admin, para
+      // contar as linhas que ele pode ver.
+      var itens = lerLinhas_();
+      linhas = ctx.admin ? Math.max(0, sheet.getLastRow() - 1)
+                         : itens.filter(function (it) { return norm_(it.email) === ctx.email; }).length;
+      nome = nomeExibicao_(ctx, itens);
     }
 
     return {
@@ -388,7 +409,8 @@ function getMeta() {
       planilha: sheet.getName(),
       linhas: linhas,
       admin: ctx.admin,
-      email: ctx.email
+      email: ctx.email,
+      nome: nome
     };
   } catch (e) {
     return { ok: false, erro: String(e && e.message || e) };

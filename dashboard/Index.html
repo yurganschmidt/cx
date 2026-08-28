@@ -204,6 +204,7 @@
   <div class="top">
     <div>
       <div class="eyebrow"><i></i>Monitor de qualidade · Onboarding</div>
+      <p class="saudacao" id="saudacao" style="margin:0 0 4px;font-size:13px;font-weight:700;color:var(--azul)"></p>
       <h1>Qualidade das consultorias</h1>
       <p class="sub" id="sub">Carregando a aba Resultados_v2…</p>
     </div>
@@ -1082,6 +1083,7 @@ function carregar(fresh){
     if (!meta || meta.ok !== true) return;
     META = meta;
     if (meta.hoje) HOJE = meta.hoje;
+    if (el('saudacao')) el('saudacao').textContent = meta.nome ? ('Olá, ' + meta.nome) : '';
     var escopo = meta.admin
       ? 'todas as consultorias (admin)'
       : 'apenas as suas consultorias (' + esc(meta.email || '') + ')';
