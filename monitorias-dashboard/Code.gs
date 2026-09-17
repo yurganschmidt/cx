@@ -675,15 +675,31 @@ function decidirContestacao(contestacaoId, decisao, justificativa, novaNota, nov
         ? novaNota : registro.notaOriginal;
       const feedbackFinal = (novoFeedback && String(novoFeedback).trim() !== '')
         ? novoFeedback : registro.feedbackOriginal;
+      // "Novas Oportunidades" só existe quando a Lari explicitamente digita
+      // algo novo. Sem isso, cair de volta nas oportunidades ORIGINAIS e
+      // gravá-las como se fossem "novas" só confunde o agente (parece que
+      // surgiu do nada). O menu de aceitar hoje nem pergunta esse campo —
+      // ele fica vazio, e o painel de "Contestação aceita" simplesmente não
+      // mostra a linha de oportunidades quando está vazio.
       const oportunidadesFinal = (novasOportunidades && String(novasOportunidades).trim() !== '')
-        ? novasOportunidades : registro.oportunidadesOriginal;
+        ? novasOportunidades : '';
 
       sheet.getRange(row, map['nova nota'] + 1).setValue(notaFinal);
       sheet.getRange(row, map['novo feedback'] + 1).setValue(feedbackFinal);
-      sheet.getRange(row, map['novas oportunidades'] + 1).setValue(oportunidadesFinal);
+      if (oportunidadesFinal) {
+        sheet.getRange(row, map['novas oportunidades'] + 1).setValue(oportunidadesFinal);
+      }
       sheet.getRange(row, map['data da revisão'] + 1).setValue(agora);
 
-      _atualizarMonitoriaRevisada_(registro.idMonitoria, notaFinal, feedbackFinal, oportunidadesFinal);
+      const atualizouMonitoria = _atualizarMonitoriaRevisada_(registro.idMonitoria, notaFinal, feedbackFinal, oportunidadesFinal);
+      if (!atualizouMonitoria) {
+        return {
+          success: true,
+          status: decisao,
+          aviso: 'A contestação foi aceita e registrada, mas a linha da monitoria "' + registro.idMonitoria +
+            '" não foi localizada na aba Monitorias para atualizar Nota/Feedback. Atualize essa linha manualmente.'
+        };
+      }
     }
 
     return { success: true, status: decisao };
@@ -733,7 +749,13 @@ function menuAceitarContestacao_() {
   const novoFeedback = feedbackResp.getResponseText().trim();
 
   const r = decidirContestacao(id, 'Aceita', justificativa, novaNota, novoFeedback, '');
-  ui.alert(r.success ? 'Contestação aceita e monitoria atualizada.' : 'Erro: ' + r.error);
+  if (!r.success) {
+    ui.alert('Erro: ' + r.error);
+  } else if (r.aviso) {
+    ui.alert('⚠️ ' + r.aviso);
+  } else {
+    ui.alert('Contestação aceita e monitoria atualizada.');
+  }
 }
 
 function menuRecusarContestacao_() {
