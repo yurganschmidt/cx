@@ -458,7 +458,19 @@ function _mapaContestacoesPorMonitoria_() {
   return map;
 }
 
-function _lerMonitoriaPorChat_(chatId) {
+/**
+ * Busca a linha da monitoria por N. do atendimento. "N. do atendimento"
+ * NÃO tem garantia de unicidade na planilha (reprocessamentos/migrações
+ * antigas podem ter deixado mais de uma linha com o mesmo número, de
+ * agentes diferentes). Por isso, quando `preferEmail` é informado, damos
+ * prioridade à linha cujo e-mail bate com quem está chamando — é a mesma
+ * linha que o RLS de getDashboardData() já usou para decidir se essa
+ * pessoa podia ver esta monitoria. Sem isso, uma linha duplicada de outro
+ * agente poderia ser lida primeiro e bloquear indevidamente o dono real.
+ * Se nenhuma linha bater com preferEmail, cai no fallback (1ª ocorrência),
+ * mantendo o comportamento original para quem chama sem e-mail (ex.: admin).
+ */
+function _lerMonitoriaPorChat_(chatId, preferEmail) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Monitorias');
   if (!sheet) return null;
@@ -474,18 +486,25 @@ function _lerMonitoriaPorChat_(chatId) {
 
   if (idxChat === -1) return null;
 
+  preferEmail = String(preferEmail || '').trim().toLowerCase();
+  let fallback = null;
+
   for (let i = 2; i < data.length; i++) {
-    if (String(data[i][idxChat]).trim() === String(chatId).trim()) {
-      return {
-        agente: idxAgente !== -1 ? String(data[i][idxAgente]).trim() : '',
-        nota: idxNota !== -1 ? data[i][idxNota] : '',
-        feedback: idxFeedback !== -1 ? data[i][idxFeedback] : '',
-        oportunidades: idxOportunidades !== -1 ? data[i][idxOportunidades] : '',
-        emailLinha: idxEmail !== -1 ? String(data[i][idxEmail]).trim().toLowerCase() : ''
-      };
-    }
+    if (String(data[i][idxChat]).trim() !== String(chatId).trim()) continue;
+
+    const registro = {
+      agente: idxAgente !== -1 ? String(data[i][idxAgente]).trim() : '',
+      nota: idxNota !== -1 ? data[i][idxNota] : '',
+      feedback: idxFeedback !== -1 ? data[i][idxFeedback] : '',
+      oportunidades: idxOportunidades !== -1 ? data[i][idxOportunidades] : '',
+      emailLinha: idxEmail !== -1 ? String(data[i][idxEmail]).trim().toLowerCase() : ''
+    };
+
+    if (preferEmail && registro.emailLinha === preferEmail) return registro;
+    if (!fallback) fallback = registro;
   }
-  return null;
+
+  return fallback;
 }
 
 function _atualizarMonitoriaRevisada_(chatId, novaNota, novoFeedback, novasOportunidades) {
@@ -539,7 +558,7 @@ function abrirContestacao(chatId, motivo) {
     const emailAgente = Session.getActiveUser().getEmail().toLowerCase().trim();
     if (!emailAgente) return { success: false, error: 'Não foi possível identificar o usuário logado.' };
 
-    const monitoria = _lerMonitoriaPorChat_(chatId);
+    const monitoria = _lerMonitoriaPorChat_(chatId, emailAgente);
     if (!monitoria) return { success: false, error: 'Monitoria não encontrada na planilha.' };
 
     const emailsAdmin = getAdminEmails();
