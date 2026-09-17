@@ -272,65 +272,13 @@ function abrirDashboard() {
   SpreadsheetApp.getUi().showModalDialog(interface, "Abrindo Dashboard...");
 }
 
-/**
- * Aplica o Row-Level Security (RLS) ocultando linhas onde o e-mail da Coluna V
- * não corresponde ao e-mail da pessoa logada na conta Google.
- *
- * NOTA: este mecanismo é independente do RLS por requisição feito em
- * getDashboardData() (que é o que realmente protege o dashboard). Esta função
- * esconde linhas na planilha real, para quem quer que a execute — não tem
- * efeito sobre o Web App e não foi alterada nesta refatoração.
- */
-function aplicarRLS() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Monitorias");
-  if (!sheet) return;
-
-  const emailUsuario = Session.getActiveUser().getEmail().toLowerCase().trim();
-  const emailsAdmin = getAdminEmails();
-
-  const ultimaLinha = sheet.getLastRow();
-  const primeiraLinhaDados = 3; // Linhas 1 e 2 são cabeçalhos
-
-  if (ultimaLinha < primeiraLinhaDados) return;
-
-  const quantidadeLinhas = ultimaLinha - primeiraLinhaDados + 1;
-  const colunaEmailIndex = 22; // Coluna V
-
-  if (emailsAdmin.includes(emailUsuario)) {
-    sheet.showRows(primeiraLinhaDados, quantidadeLinhas);
-    SpreadsheetApp.getUi().alert(`Bem-vindo, Admin (${emailUsuario})! Todas as linhas estão visíveis.`);
-    return;
-  }
-
-  const rangeEmails = sheet.getRange(primeiraLinhaDados, colunaEmailIndex, quantidadeLinhas, 1).getValues();
-
-  sheet.showRows(primeiraLinhaDados, quantidadeLinhas);
-
-  for (let i = 0; i < rangeEmails.length; i++) {
-    const emailLinha = rangeEmails[i][0].toString().toLowerCase().trim();
-    const numeroLinhaAtual = i + primeiraLinhaDados;
-
-    if (emailLinha !== "" && emailLinha !== emailUsuario) {
-      sheet.hideRows(numeroLinhaAtual);
-    }
-  }
-
-  SpreadsheetApp.getUi().alert(`Visão personalizada aplicada para: ${emailUsuario}`);
-}
-
-/**
- * Exibe todas as linhas da planilha
- */
-function restaurarVisao() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Monitorias");
-  if (sheet) {
-    const ultimaLinha = sheet.getLastRow();
-    if (ultimaLinha >= 3) {
-      sheet.showRows(3, ultimaLinha - 2);
-    }
-  }
-}
+// aplicarRLS() e restaurarVisao() NÃO estão neste arquivo: elas já existem
+// em RLS_Seguranca.gs no projeto real. Definir de novo aqui criaria duas
+// funções de mesmo nome no mesmo projeto (colisão silenciosa — só uma
+// "vence" em runtime, sem erro nenhum). Ambas são independentes do RLS por
+// requisição feito em getDashboardData() (que é o que realmente protege o
+// Web App) — ver diagnóstico, seção C.6, para a inconsistência entre a
+// lista de admins fixa usada por aplicarRLS() e a aba "Admins" usada aqui.
 
 // =====================================================================
 // NOVO — FLUXO DE CONTESTAÇÃO
