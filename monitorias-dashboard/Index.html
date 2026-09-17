@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Olist | Monitorias</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body { background-color: #F2F0E8; font-family: 'Plus Jakarta Sans', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  </style>
+</head>
+<body class="text-slate-800 antialiased">
+  <header class="bg-white border-b border-[#e4e0d3] px-8 py-4 sticky top-0 z-40 flex flex-col lg:flex-row justify-between items-center gap-4">
+    <div class="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-start">
+      <div class="flex items-center gap-2">
+        <span class="text-[#0A4EE4] font-black text-2xl tracking-tight">Olist</span>
+        <span class="text-slate-300 font-light text-xl">|</span>
+        <h1 class="text-[#001647] font-medium text-xl tracking-tight">Monitorias</h1>
+      </div>
+      <div class="bg-[#F2F0E8] border border-[#e4e0d3] px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
+        <span class="text-xs font-bold text-[#001647]" id="userGreeting">Carregando...</span>
+      </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
+      <div id="containerFilterLideranca" class="flex items-center gap-2 w-full sm:w-auto">
+        <label for="filterLideranca" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Liderança</label>
+        <select id="filterLideranca" onchange="applyGlobalFilter()" class="w-full sm:w-44 bg-white border border-[#e4e0d3] text-[#001647] text-xs rounded-lg p-2 font-medium">
+          <option value="ALL">Todos os Supervisores</option>
+        </select>
+      </div>
+      <div id="containerFilterAgente" class="flex items-center gap-2 w-full sm:w-auto">
+        <label for="filterAgente" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Agente</label>
+        <select id="filterAgente" onchange="applyGlobalFilter()" class="w-full sm:w-44 bg-white border border-[#e4e0d3] text-[#001647] text-xs rounded-lg p-2 font-medium">
+          <option value="ALL">Todos os Agentes</option>
+        </select>
+      </div>
+      <div id="containerFilterSemana" class="flex items-center gap-2 w-full sm:w-auto">
+        <label for="filterSemana" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Semana</label>
+        <select id="filterSemana" onchange="applyGlobalFilter()" class="w-full sm:w-44 bg-white border border-[#e4e0d3] text-[#001647] text-xs rounded-lg p-2 font-medium">
+          <option value="ALL">Todas as Semanas</option>
+        </select>
+      </div>
+      <div id="containerFilterCiclo" class="flex items-center gap-2 w-full sm:w-auto">
+        <label for="filterCiclo" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Ciclo</label>
+        <select id="filterCiclo" onchange="applyGlobalFilter()" class="w-full sm:w-44 bg-white border border-[#e4e0d3] text-[#001647] text-xs rounded-lg p-2 font-medium">
+          <option value="ALL">Todos os Ciclos</option>
+        </select>
+      </div>
+      <div id="containerFilterLido" class="hidden items-center gap-2 w-full sm:w-auto">
+        <label for="filterLido" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">Status</label>
+        <select id="filterLido" onchange="applyGlobalFilter()" class="w-full sm:w-44 bg-white border border-[#e4e0d3] text-[#001647] text-xs rounded-lg p-2 font-medium">
+          <option value="ALL">Todos</option>
+          <option value="Sim">Lidos</option>
+          <option value="Não">Não lidos</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1600px] mx-auto p-4 sm:p-8 space-y-8">
+
+    <!-- 1. BIG NUMBERS — "Como estão os resultados?" -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div class="bg-[#0A4EE4] p-6 rounded-2xl flex flex-col justify-between min-h-[148px]">
+        <span class="text-[11px] font-bold text-white/70 uppercase tracking-widest">Total Analisado</span>
+        <div class="flex items-baseline gap-2 mt-5">
+          <span id="metricTotal" class="text-[52px] font-extrabold text-white leading-none tracking-tight">0</span>
+          <span class="text-sm font-medium text-white/70">atendimentos</span>
+        </div>
+      </div>
+      <div class="bg-[#0A4EE4] p-6 rounded-2xl flex flex-col justify-between min-h-[148px]">
+        <span class="text-[11px] font-bold text-white/70 uppercase tracking-widest">Média Geral</span>
+        <div class="flex items-baseline gap-2 mt-5">
+          <span id="metricMedia" class="text-[52px] font-extrabold text-white leading-none tracking-tight">0</span>
+          <span class="text-sm font-medium text-white/70">pts</span>
+        </div>
+      </div>
+      <div class="bg-[#0A4EE4] p-6 rounded-2xl flex flex-col justify-between min-h-[148px]">
+        <span id="labelMetricFeedback" class="text-[11px] font-bold text-white/70 uppercase tracking-widest">Feedbacks Aplicados</span>
+        <div class="mt-5">
+          <div class="flex items-baseline gap-2">
+            <span id="metricTaxaFeedback" class="text-[52px] font-extrabold text-white leading-none tracking-tight">0%</span>
+            <span id="sublabelMetricFeedback" class="text-sm font-medium text-white/70">concluídos</span>
+          </div>
+          <div class="mt-4 h-1.5 w-full rounded-full bg-white/25 overflow-hidden">
+            <div id="metricFeedbackBar" class="h-full rounded-full bg-white transition-all duration-500" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. PONTOS DE ATENÇÃO — "O que merece minha atenção?" (Coluna W) -->
+    <section id="criticalSection" class="hidden">
+      <div class="bg-[#F0A028] rounded-2xl overflow-hidden">
+        <div class="px-6 py-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div class="flex items-center gap-3">
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#001647]/10 text-[#001647] text-lg font-black leading-none">★</span>
+            <div>
+              <h3 id="criticalTitle" class="text-base font-bold text-[#001647] tracking-tight">Pontos de atenção</h3>
+              <p id="criticalSubtitle" class="text-xs font-medium text-[#001647]/70 mt-0.5">Casos que merecem uma análise mais atenta</p>
+            </div>
+          </div>
+          <span id="criticalCount" class="text-[11px] font-bold text-[#001647] bg-white/55 px-3 py-1.5 rounded-full">0 casos</span>
+        </div>
+        <div id="criticalCards" class="px-6 pb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+
+    <!-- 3. BASE COMPLETA — "Onde posso aprofundar?" -->
+    <section class="bg-white rounded-2xl border border-[#e4e0d3] overflow-hidden">
+      <div class="px-6 py-5 border-b border-[#F2F0E8] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h3 class="text-base font-bold text-[#001647] tracking-tight">Atendimentos analisados</h3>
+        <div class="text-xs font-semibold text-slate-400" id="tableCount">Carregando registros...</div>
+      </div>
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-[#F2F0E8]/60 text-slate-400 text-[10px] font-bold uppercase tracking-wider border-b border-[#F2F0E8]">
+              <th class="py-3.5 px-6">Atendimento</th>
+              <th class="py-3.5 px-6">Agente</th>
+              <th class="py-3.5 px-6 text-center">Nota QA</th>
+              <th class="py-3.5 px-6 text-center">Data</th>
+              <th class="py-3.5 px-6 text-center">Status Monitoria</th>
+              <th class="py-3.5 px-6 text-center hidden" id="thLido">Lido</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-[#F2F0E8] text-sm font-medium">
+            <tr><td colspan="6" class="text-center py-8 text-slate-400 italic">Conectando ao banco de dados...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL PRINCIPAL — CENTRALIZADO -->
+  <div id="detailModal" class="fixed inset-0 z-50 hidden overflow-hidden" onclick="closeModal()">
+    <div class="absolute inset-0 bg-[#001647]/50 backdrop-blur-sm"></div>
+    <div class="relative h-full w-full flex items-center justify-center p-4 sm:p-8">
+      <div class="w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+
+        <div class="bg-white px-8 py-6 border-b border-[#F2F0E8] flex justify-between items-start gap-4 shrink-0">
+          <div>
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <h2 id="modalChatID" class="text-2xl font-extrabold text-[#001647] tracking-tight">-</h2>
+              <span id="modalCriticalBadge" class="hidden text-[10px] font-black uppercase tracking-wider text-[#8a5a00] bg-[#F0A028]/15 px-2.5 py-1 rounded-full">Ponto de atenção</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-1.5 font-semibold">Agente: <span id="modalAgente" class="text-slate-600"></span> • Data: <span id="modalData" class="text-slate-600"></span></p>
+          </div>
+          <button onclick="closeModal()" class="shrink-0 h-9 w-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-[#001647] hover:bg-[#F2F0E8] text-xl font-bold transition-colors">&times;</button>
+        </div>
+
+        <div class="p-8 overflow-y-auto custom-scrollbar grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8 items-start">
+
+          <!-- Coluna esquerda: resumo -->
+          <div class="space-y-4">
+            <div class="bg-[#F2F0E8] p-6 rounded-xl flex flex-col items-center justify-center">
+              <div id="modalNota" class="text-5xl font-black text-[#001647] leading-none">0</div>
+              <div id="modalBadgeClass" class="mt-3"></div>
+            </div>
+            <div class="bg-[#F2F0E8] p-5 rounded-xl space-y-3 text-xs">
+              <div><span class="text-slate-400 font-bold uppercase text-[10px] tracking-wider">Motivo</span> <span id="modalMotivo" class="text-[#001647] font-semibold block mt-0.5 text-sm"></span></div>
+              <div><span class="text-slate-400 font-bold uppercase text-[10px] tracking-wider">Submotivo</span> <span id="modalSubmotivo" class="text-[#001647] font-semibold block mt-0.5 text-sm"></span></div>
+              <div><span class="text-slate-400 font-bold uppercase text-[10px] tracking-wider">Status da monitoria</span> <span id="modalStatus" class="text-[#001647] font-semibold block mt-0.5 text-sm">-</span></div>
+            </div>
+
+            <!-- ADMIN: controle de "Avaliação aplicada?" -->
+            <div id="boxFeedbackAgente" class="bg-[#F2F0E8] p-5 rounded-xl">
+              <span class="text-slate-400 font-bold uppercase block mb-2 text-[10px] tracking-wider">Feedback ao Agente</span>
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="modalCheckAplicado" onchange="handleStatusChange()" class="w-4 h-4 text-[#0A4EE4] border-slate-300 rounded focus:ring-[#0A4EE4] cursor-pointer disabled:opacity-50">
+                <span id="modalDataFeedback" class="text-[#001647] text-sm font-semibold block">Não</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Coluna direita: leitura -->
+          <div class="space-y-6 min-w-0">
+            <div>
+              <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Feedback</h4>
+              <div id="modalFeedback" class="bg-white border border-[#e4e0d3] p-5 rounded-xl text-[15px] text-slate-700 whitespace-pre-line leading-relaxed"></div>
+            </div>
+            <div>
+              <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Oportunidades</h4>
+              <div id="modalOportunidades" class="bg-white border border-[#e4e0d3] p-5 rounded-xl text-[15px] text-slate-700 whitespace-pre-line leading-relaxed"></div>
+            </div>
+
+            <!-- NÃO-ADMIN: "Li esse feedback" -->
+            <div id="boxLiFeedback" class="hidden">
+              <label for="checkLiFeedback" class="flex items-start gap-3 bg-[#8DD7D7]/25 border border-[#8DD7D7] rounded-xl p-4 cursor-pointer">
+                <input type="checkbox" id="checkLiFeedback" onchange="handleLiFeedbackChange()" class="mt-0.5 w-5 h-5 text-[#0A4EE4] border-slate-300 rounded focus:ring-[#0A4EE4] cursor-pointer disabled:opacity-50">
+                <span>
+                  <span class="block text-sm font-bold text-[#001647]">Li esse feedback</span>
+                  <span id="liFeedbackHint" class="block text-xs text-[#001647]/60 mt-0.5">Confirmação obrigatória para fechar este painel.</span>
+                </span>
+              </label>
+            </div>
+
+            <!-- NOVO: painel de contestação (substitui o antigo link para o Google Form) -->
+            <div id="contestacaoPanel"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POP-UP CENTRAL DE LEITURA OBRIGATÓRIA -->
+  <div id="confirmReadModal" style="display: none;" class="fixed inset-0 z-[60] flex items-center justify-center bg-[#001647]/50 backdrop-blur-sm p-4">
+    <div class="bg-white p-7 rounded-2xl shadow-xl w-full max-w-sm text-center">
+      <div class="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#F0A028]/15 text-[#F0A028] text-lg font-black">!</div>
+      <h3 class="text-lg font-bold text-[#001647] mb-2">Confirmação obrigatória</h3>
+      <p class="text-sm text-slate-500 mb-6">Para fechar este feedback você precisa marcar a opção <strong class="text-[#001647]">&quot;Li esse feedback&quot;</strong>. Confirme abaixo que você leu e compreendeu o feedback deste atendimento.</p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <button onclick="voltarAoFeedback()" class="w-full sm:w-auto px-5 py-2 text-sm font-bold text-slate-600 bg-[#F2F0E8] hover:bg-[#e4e0d3] rounded-lg transition-colors">Voltar ao feedback</button>
+        <button onclick="confirmRead()" class="w-full sm:w-auto px-5 py-2 text-sm font-bold text-white bg-[#0A4EE4] hover:bg-[#083db3] rounded-lg transition-colors">Li esse feedback</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var rawDataset = [];
+    var currentFilteredDataset = [];
+    var isAdmin = false;
+    var activeChatId = null;
+    var activeRowIndexInFiltered = null;
+
+    function $(id) { return document.getElementById(id); }
+
+    function setTableMessage(msg, cls) {
+      $('tableBody').innerHTML = '<tr><td colspan="6" class="text-center py-8 ' + cls + '">' + msg + '</td></tr>';
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+      if (typeof google === 'undefined' || !google.script || !google.script.run) {
+        $('userGreeting').textContent = 'Fora do Apps Script';
+        setTableMessage('Abra pela URL /exec do Web App.', 'text-red-500 font-bold');
+        return;
+      }
+
+      var respondeu = false;
+      setTimeout(function () {
+        if (!respondeu) setTableMessage('O servidor nao respondeu. Publique uma NOVA VERSAO da implantacao.', 'text-red-500 font-bold');
+      }, 20000);
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          respondeu = true;
+          if (!response) { setTableMessage('Erro: resposta vazia do servidor.', 'text-red-500 font-bold'); return; }
+          if (response.error) {
+            $('userGreeting').textContent = 'Erro!';
+            setTableMessage(response.error, 'text-red-500 font-bold');
+            return;
+          }
+
+          rawDataset = response.data || [];
+          isAdmin = !!response.ehAdmin;
+          $('userGreeting').textContent = 'Ola, ' + response.userName + '!';
+
+          if (isAdmin) {
+            $('labelMetricFeedback').textContent = 'Feedbacks Aplicados';
+            $('sublabelMetricFeedback').textContent = 'concluidos';
+            $('criticalTitle').textContent = 'Pontos de atencao';
+            $('criticalSubtitle').textContent = 'Casos sinalizados na base que merecem uma analise mais atenta.';
+          } else {
+            $('containerFilterLideranca').classList.add('hidden');
+            $('containerFilterAgente').classList.add('hidden');
+            $('containerFilterLido').classList.remove('hidden');
+            $('labelMetricFeedback').textContent = 'Feedbacks Lidos';
+            $('sublabelMetricFeedback').textContent = 'lidos';
+            $('thLido').classList.remove('hidden');
+            $('boxFeedbackAgente').classList.add('hidden');
+            $('boxLiFeedback').classList.remove('hidden');
+            $('criticalTitle').textContent = 'Feedbacks para olhar com atencao';
+            $('criticalSubtitle').textContent = 'Oportunidades de melhoria direcionadas a voce - vale comecar por aqui.';
+          }
+
+          populateSupervisorFilter();
+          populateAgenteFilter();
+          populateSemanaFilter();
+          populateCicloFilter();
+          renderDashboard();
+        })
+        .withFailureHandler(function (error) {
+          respondeu = true;
+          setTableMessage('Falha de comunicacao: ' + error.message, 'text-red-500 font-bold');
+        })
+        .getDashboardData();
+    });
+
+    function uniqueValues(campo) {
+      var vistos = {};
+      var saida = [];
+      for (var i = 0; i < rawDataset.length; i++) {
+        var v = String(rawDataset[i][campo] == null ? '' : rawDataset[i][campo]).trim();
+        if (!v || v === '-' || vistos[v]) continue;
+        vistos[v] = true;
+        saida.push(v);
+      }
+      return saida;
+    }
+
+    function populateSemanaFilter() {
+      var select = $('filterSemana');
+      var semanas = uniqueValues('Semana').sort(function (a, b) {
+        return (parseInt(a.replace(/\D/g, ''), 10) || 0) - (parseInt(b.replace(/\D/g, ''), 10) || 0);
+      });
+      for (var i = 0; i < semanas.length; i++) select.add(new Option(semanas[i], semanas[i]));
+    }
+
+    function populateCicloFilter() {
+      var select = $('filterCiclo');
+      var ciclos = uniqueValues('Ciclo').sort(function (a, b) {
+        return (parseInt(a.replace(/\D/g, ''), 10) || 0) - (parseInt(b.replace(/\D/g, ''), 10) || 0);
+      });
+      for (var i = 0; i < ciclos.length; i++) select.add(new Option(ciclos[i], ciclos[i]));
+    }
+
+    function populateAgenteFilter() {
+      var select = $('filterAgente');
+      var agentes = uniqueValues('Agente').sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
+      for (var i = 0; i < agentes.length; i++) select.add(new Option(agentes[i], agentes[i]));
+    }
+
+    function populateSupervisorFilter() {
+      var select = $('filterLideranca');
+      var leaders = uniqueValues('Lideranca');
+      if (leaders.length === 0) leaders = uniqueValues('Liderança');
+      leaders = leaders.filter(function (l) { return l.toLowerCase().indexOf('lider') !== 0; });
+      leaders.sort(function (a, b) { return a.localeCompare(b, 'pt-BR'); });
+      for (var i = 0; i < leaders.length; i++) select.add(new Option(leaders[i], leaders[i]));
+    }
+
+    function getClassification(score) {
+      if (score === '' || isNaN(score)) return { text: '-', klass: 'bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-full' };
+      var num = Number(score);
+      if (num >= 90) return { text: 'EXCELENTE', klass: 'bg-[#0A4EE4]/10 text-[#0A4EE4] font-bold text-[10px] px-2.5 py-1 rounded-full tracking-wider' };
+      if (num >= 70) return { text: 'BOM', klass: 'bg-[#779E3D]/15 text-[#4d6b23] font-bold text-[10px] px-2.5 py-1 rounded-full tracking-wider' };
+      return { text: 'INSATISFATORIO', klass: 'bg-[#F0A028]/15 text-[#8a5a00] font-bold text-[10px] px-2.5 py-1 rounded-full tracking-wider' };
+    }
+
+    function applyGlobalFilter() { renderDashboard(); }
+
+    function esc(str) {
+      var s = String(str == null ? '' : str);
+      s = s.split('&').join('&amp;');
+      s = s.split('<').join('&lt;');
+      s = s.split('>').join('&gt;');
+      s = s.split('"').join('&quot;');
+      return s;
+    }
+
+    // Pontos de atencao (Coluna W)
+    function renderCriticalCases() {
+      var section = $('criticalSection');
+      var container = $('criticalCards');
+      var criticos = [];
+      var idx = [];
+      for (var i = 0; i < currentFilteredDataset.length; i++) {
+        if (currentFilteredDataset[i]['Critico'] === true) { criticos.push(currentFilteredDataset[i]); idx.push(i); }
+      }
+
+      if (criticos.length === 0) {
+        section.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+      }
+
+      section.classList.remove('hidden');
+      $('criticalCount').textContent = criticos.length + (criticos.length === 1 ? ' caso' : ' casos');
+
+      var html = '';
+      for (var j = 0; j < criticos.length; j++) {
+        var item = criticos[j];
+        var motivoCritico = String(item['Motivo Critico'] || '').trim();
+        var detalhe = (motivoCritico && motivoCritico.toLowerCase() !== 'sim') ? motivoCritico : (item['Motivo do contato'] || 'Sem motivo registrado');
+        var tag;
+        if (!isAdmin) {
+          var lido = item['Lido'] === 'Sim';
+          tag = '<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full ' + (lido ? 'bg-[#779E3D]/15 text-[#4d6b23]' : 'bg-[#0A4EE4] text-white') + '">' + (lido ? 'Lido' : 'A ler') + '</span>';
+        } else {
+          tag = '<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-[#F2F0E8] text-slate-500">' + esc(item['Status da monitoria'] || '-') + '</span>';
+        }
+        html += '<button type="button" onclick="openModalByIndex(' + idx[j] + ')" class="text-left bg-white hover:bg-[#fffdf9] rounded-xl p-5 transition-colors flex flex-col gap-2.5">' +
+          '<div class="flex items-center justify-between gap-2"><span class="font-extrabold text-[#001647] tracking-tight text-sm">' + esc(item['N. do chat']) + '</span>' + tag + '</div>' +
+          '<div class="text-xs font-semibold text-slate-500">' + esc(item['Agente'] || '-') + ' • ' + esc(item['Data'] || '-') + '</div>' +
+          '<div class="text-[13px] text-slate-600 leading-snug">' + esc(detalhe) + '</div>' +
+          '<div class="flex items-center justify-between pt-2 mt-auto border-t border-[#F2F0E8]"><span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pt-2">Nota</span>' +
+          '<span class="text-xl font-black text-[#001647] leading-none pt-2">' + esc(item['Nota'] || '-') + '</span></div></button>';
+      }
+      container.innerHTML = html;
+    }
+
+    function renderDashboard() {
+      var selectedLeader = $('filterLideranca').value;
+      var selectedAgente = $('filterAgente').value;
+      var selectedSemana = $('filterSemana').value;
+      var selectedCiclo = $('filterCiclo').value;
+      var selectedLido = isAdmin ? 'ALL' : $('filterLido').value;
+
+      currentFilteredDataset = rawDataset.filter(function (item) {
+        var lider = String(item['Lideranca'] || item['Liderança'] || '').trim();
+        var okLider = (selectedLeader === 'ALL' || lider === selectedLeader);
+        var okAgente = (selectedAgente === 'ALL' || String(item['Agente']).trim() === selectedAgente);
+        var okSemana = (selectedSemana === 'ALL' || String(item['Semana']).trim() === selectedSemana);
+        var okCiclo = (selectedCiclo === 'ALL' || String(item['Ciclo']).trim() === selectedCiclo);
+        var okLido = (selectedLido === 'ALL' || String(item['Lido']).trim() === selectedLido);
+        return okLider && okAgente && okSemana && okCiclo && okLido;
+      });
+
+      var total = currentFilteredDataset.length;
+
+      var aplicados = currentFilteredDataset.filter(function (item) {
+        if (isAdmin) {
+          return String(item['Status da monitoria']).toLowerCase().trim() === 'finalizado' || String(item['Avaliacao aplicada?'] || item['Avaliação aplicada?'] || '').toLowerCase().trim() === 'sim';
+        }
+        return String(item['Lido']) === 'Sim';
+      }).length;
+
+      var taxa = total > 0 ? Math.round((aplicados / total) * 100) : 0;
+      var soma = 0, validas = 0;
+      for (var i = 0; i < total; i++) {
+        var n = currentFilteredDataset[i]['Nota'];
+        if (n !== '' && !isNaN(n)) { soma += Number(n); validas++; }
+      }
+      var media = validas > 0 ? Math.round(soma / validas) : 0;
+
+      $('metricTotal').textContent = total;
+      $('metricMedia').textContent = media;
+      $('metricTaxaFeedback').textContent = taxa + '%';
+      $('metricFeedbackBar').style.width = taxa + '%';
+
+      renderCriticalCases();
+
+      if (total === 0) {
+        setTableMessage('Nenhum atendimento encontrado.', 'text-slate-400 italic');
+      } else {
+        var html = '';
+        for (var k = 0; k < total; k++) {
+          var item2 = currentFilteredDataset[k];
+          var lidoTd = '';
+          if (!isAdmin) {
+            lidoTd = '<td class="py-4 px-6 text-center text-xs font-bold ' + (item2['Lido'] === 'Sim' ? 'text-[#4d6b23]' : 'text-slate-400') + '">' + esc(item2['Lido']) + '</td>';
+          }
+          var criticoTag = item2['Critico'] ? '<span class="ml-2 align-middle text-[9px] font-black uppercase text-[#8a5a00] bg-[#F0A028]/15 px-1.5 py-0.5 rounded-full">Atencao</span>' : '';
+          html += '<tr class="hover:bg-[#F2F0E8]/60 cursor-pointer transition-colors duration-150" onclick="openModalByIndex(' + k + ')">' +
+            '<td class="py-4 px-6 font-bold text-[#0A4EE4] tracking-tight">' + esc(item2['N. do chat']) + criticoTag + '</td>' +
+            '<td class="py-4 px-6 text-slate-700">' + esc(item2['Agente']) + '</td>' +
+            '<td class="py-4 px-6 text-center font-extrabold text-[#001647]">' + esc(item2['Nota'] || '-') + '</td>' +
+            '<td class="py-4 px-6 text-center text-slate-500 text-xs">' + esc(item2['Data']) + '</td>' +
+            '<td class="py-4 px-6 text-center text-xs text-slate-500 font-semibold">' + esc(item2['Status da monitoria'] || '-') + '</td>' +
+            lidoTd + '</tr>';
+        }
+        $('tableBody').innerHTML = html;
+      }
+
+      $('tableCount').textContent = 'Mostrando ' + total + ' registros';
+    }
+
+    function openModalByIndex(index) {
+      activeRowIndexInFiltered = index;
+      var item = currentFilteredDataset[index];
+      if (!item) return;
+
+      activeChatId = item['N. do chat'];
+      var c = getClassification(item['Nota']);
+
+      $('modalChatID').textContent = item['N. do chat'];
+      $('modalAgente').textContent = item['Agente'];
+      $('modalData').textContent = item['Data'];
+      $('modalNota').textContent = item['Nota'] || '-';
+      $('modalCriticalBadge').classList.toggle('hidden', item['Critico'] !== true);
+
+      var badge = $('modalBadgeClass');
+      badge.textContent = c.text;
+      badge.className = c.klass;
+      $('modalMotivo').textContent = item['Motivo do contato'] || '-';
+      $('modalSubmotivo').textContent = item['Submotivo do contato'] || '-';
+      $('modalFeedback').textContent = item['Feedback'] || 'Nenhum feedback registrado.';
+      $('modalOportunidades').textContent = item['Oportunidades'] || 'Nenhuma oportunidade registrada.';
+      $('modalStatus').textContent = item['Status da monitoria'] || '-';
+
+      if (isAdmin) {
+        var chkAdmin = $('modalCheckAplicado');
+        var label = $('modalDataFeedback');
+        var aplicado = String(item['Avaliacao aplicada?'] || item['Avaliação aplicada?'] || '').toLowerCase().trim() === 'sim';
+        chkAdmin.checked = aplicado;
+        chkAdmin.disabled = false;
+        label.textContent = aplicado ? 'Sim' : 'Nao';
+        label.className = aplicado ? 'text-[#4d6b23] text-sm font-bold block' : 'text-[#001647] text-sm font-semibold block';
+      } else {
+        var chk = $('checkLiFeedback');
+        var hint = $('liFeedbackHint');
+        var jaLido = item['Lido'] === 'Sim';
+        chk.checked = jaLido;
+        chk.disabled = jaLido;
+        hint.textContent = jaLido ? 'Leitura confirmada.' : 'Confirmacao obrigatoria para fechar este painel.';
+      }
+
+      renderContestacaoPanel(item);
+      $('detailModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      if (!isAdmin && activeRowIndexInFiltered !== null) {
+        var item = currentFilteredDataset[activeRowIndexInFiltered];
+        var marcado = $('checkLiFeedback').checked;
+        if (item && item['Lido'] !== 'Sim' && !marcado) {
+          $('confirmReadModal').style.display = 'flex';
+          return;
+        }
+      }
+      fecharModalPrincipal();
+    }
+
+    function fecharModalPrincipal() { $('detailModal').classList.add('hidden'); }
+
+    function voltarAoFeedback() { $('confirmReadModal').style.display = 'none'; }
+
+    function confirmRead() {
+      $('confirmReadModal').style.display = 'none';
+      var chk = $('checkLiFeedback');
+      if (!chk.checked) {
+        chk.checked = true;
+        handleLiFeedbackChange(true);
+      } else {
+        fecharModalPrincipal();
+      }
+    }
+
+    function handleLiFeedbackChange(fecharAposSalvar) {
+      var chk = $('checkLiFeedback');
+      var hint = $('liFeedbackHint');
+      if (!activeChatId || !chk.checked) return;
+
+      chk.disabled = true;
+      hint.textContent = 'Salvando confirmacao...';
+
+      var item = currentFilteredDataset[activeRowIndexInFiltered];
+      var rawItem = null;
+      for (var i = 0; i < rawDataset.length; i++) {
+        if (rawDataset[i]['N. do chat'] === activeChatId) { rawItem = rawDataset[i]; break; }
+      }
+      if (item) item['Lido'] = 'Sim';
+      if (rawItem) rawItem['Lido'] = 'Sim';
+      renderDashboard();
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          if (response && response.success) {
+            hint.textContent = 'Leitura confirmada.';
+            if (fecharAposSalvar) fecharModalPrincipal();
+          } else {
+            chk.checked = false;
+            chk.disabled = false;
+            hint.textContent = 'Erro ao salvar: ' + ((response && response.error) || 'tente novamente.');
+            if (item) item['Lido'] = 'Nao';
+            if (rawItem) rawItem['Lido'] = 'Nao';
+            renderDashboard();
+          }
+        })
+        .withFailureHandler(function (err) {
+          chk.checked = false;
+          chk.disabled = false;
+          hint.textContent = 'Falha de comunicacao: ' + err.message;
+          if (item) item['Lido'] = 'Nao';
+          if (rawItem) rawItem['Lido'] = 'Nao';
+          renderDashboard();
+        })
+        .marcarComoLidoSheet(activeChatId);
+    }
+
+    function handleStatusChange() {
+      var checkbox = $('modalCheckAplicado');
+      var label = $('modalDataFeedback');
+      if (!activeChatId) return;
+
+      checkbox.disabled = true;
+      label.textContent = 'Salvando...';
+      label.className = 'text-[#0A4EE4] text-sm font-medium animate-pulse block';
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          checkbox.disabled = false;
+          if (response.success) {
+            currentFilteredDataset[activeRowIndexInFiltered]['Avaliação aplicada?'] = response.status;
+            for (var i = 0; i < rawDataset.length; i++) {
+              if (rawDataset[i]['N. do chat'] === activeChatId) { rawDataset[i]['Avaliação aplicada?'] = response.status; break; }
+            }
+            label.textContent = response.status === 'Sim' ? 'Sim' : 'Nao';
+            label.className = response.status === 'Sim' ? 'text-[#4d6b23] text-sm font-bold block' : 'text-[#001647] text-sm font-semibold block';
+            renderDashboard();
+          } else {
+            alert('Erro ao salvar: ' + response.error);
+            checkbox.checked = !checkbox.checked;
+            label.textContent = checkbox.checked ? 'Sim' : 'Nao';
+          }
+        })
+        .withFailureHandler(function (err) {
+          checkbox.disabled = false;
+          checkbox.checked = !checkbox.checked;
+          label.textContent = 'Erro';
+          label.className = 'text-[#E64E36] text-sm font-bold block';
+          alert('Falha de comunicacao: ' + err.message);
+        })
+        .updateFeedbackStatusOnSheet(activeChatId, checkbox.checked);
+    }
+
+    // =================================================================
+    // NOVO — painel de contestação (substitui o antigo link para o
+    // Google Form). Estados: Nenhuma | Aberta | Em Análise | Aceita | Recusada.
+    // =================================================================
+
+    function renderContestacaoPanel(item) {
+      var panel = $('contestacaoPanel');
+      var c = item['Contestacao'] || { status: 'Nenhuma' };
+      var status = c.status || 'Nenhuma';
+      var html = '<h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Contestação</h4>';
+
+      if (status === 'Nenhuma') {
+        if (isAdmin) {
+          html += '<div class="bg-[#F2F0E8] rounded-xl p-4 text-xs font-semibold text-slate-500">Sem contestação registrada para esta monitoria.</div>';
+        } else {
+          html += '<div class="bg-white border border-[#e4e0d3] rounded-xl p-5">' +
+            '<p class="text-sm text-slate-600 mb-3">Se você não concorda com a avaliação, pode registrar uma contestação explicando o motivo. A Qualidade vai analisar e te retornar por aqui mesmo.</p>' +
+            '<button id="btnDiscordar" onclick="abrirFormularioContestacao()" class="bg-white hover:bg-[#F2F0E8] text-[#0A4EE4] font-bold py-2 px-4 rounded-lg border border-[#0A4EE4]/30 transition-colors text-xs">Discordar do feedback</button>' +
+            '<div id="formContestacao" class="hidden mt-4 space-y-3">' +
+              '<textarea id="motivoContestacaoInput" rows="4" class="w-full border border-[#e4e0d3] rounded-lg p-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0A4EE4]/30" placeholder="Explique o motivo da contestação..."></textarea>' +
+              '<div id="contestacaoErro" class="hidden text-xs font-semibold text-[#E64E36]"></div>' +
+              '<div class="flex gap-2">' +
+                '<button onclick="enviarContestacao()" id="btnEnviarContestacao" class="bg-[#0A4EE4] hover:bg-[#083db3] text-white font-bold py-2 px-4 rounded-lg text-xs transition-colors">Enviar contestação</button>' +
+                '<button onclick="cancelarContestacao()" class="bg-[#F2F0E8] hover:bg-[#e4e0d3] text-slate-600 font-bold py-2 px-4 rounded-lg text-xs transition-colors">Cancelar</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }
+      } else if (status === 'Aberta' || status === 'Em Análise') {
+        var titulo = status === 'Aberta' ? 'Contestação enviada' : 'Contestação em análise';
+        html += '<div class="bg-[#F2F0E8] rounded-xl p-5">' +
+          '<span class="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-[#0A4EE4] text-white">' + esc(titulo) + '</span>' +
+          '<p class="text-sm text-[#001647] font-semibold mt-2">Aguardando análise da Qualidade.</p>' +
+          (c.motivo ? '<p class="mt-2 text-xs text-slate-500">Seu motivo: "' + esc(c.motivo) + '"</p>' : '') +
+          (isAdmin ? '<p class="mt-3 text-[11px] text-slate-400">Gerencie pelo menu <strong>Contestações</strong> na planilha.</p>' : '') +
+        '</div>';
+      } else if (status === 'Aceita') {
+        html += '<div class="bg-[#779E3D]/10 border border-[#779E3D]/30 rounded-xl p-5">' +
+          '<span class="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-[#779E3D] text-white">Contestação aceita</span>' +
+          '<p class="text-sm text-[#001647] font-semibold mt-2">A avaliação foi revisada pela Qualidade.</p>' +
+          (c.novaNota !== undefined && c.novaNota !== '' ? '<p class="mt-2 text-xs text-slate-500">Nova nota: <strong class="text-[#001647]">' + esc(c.novaNota) + '</strong></p>' : '') +
+          (c.novoFeedback ? '<p class="mt-2 text-xs text-slate-500 whitespace-pre-line">Novo feedback: ' + esc(c.novoFeedback) + '</p>' : '') +
+          (c.novasOportunidades ? '<p class="mt-2 text-xs text-slate-500 whitespace-pre-line">Novas oportunidades: ' + esc(c.novasOportunidades) + '</p>' : '') +
+        '</div>';
+      } else if (status === 'Recusada') {
+        html += '<div class="bg-[#F0A028]/10 border border-[#F0A028]/30 rounded-xl p-5">' +
+          '<span class="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-[#F0A028] text-[#001647]">Contestação não aceita</span>' +
+          '<p class="text-sm text-[#001647] font-semibold mt-2">A avaliação original foi mantida.</p>' +
+          (c.justificativa ? '<p class="mt-2 text-xs text-slate-500">Justificativa da Qualidade: ' + esc(c.justificativa) + '</p>' : '') +
+        '</div>';
+      }
+
+      panel.innerHTML = html;
+    }
+
+    function abrirFormularioContestacao() {
+      $('btnDiscordar').classList.add('hidden');
+      $('formContestacao').classList.remove('hidden');
+    }
+
+    function cancelarContestacao() {
+      $('formContestacao').classList.add('hidden');
+      $('btnDiscordar').classList.remove('hidden');
+      $('motivoContestacaoInput').value = '';
+      $('contestacaoErro').classList.add('hidden');
+    }
+
+    function enviarContestacao() {
+      var textarea = $('motivoContestacaoInput');
+      var erro = $('contestacaoErro');
+      var motivo = textarea.value.trim();
+      erro.classList.add('hidden');
+
+      if (motivo.length < 10) {
+        erro.textContent = 'Descreva o motivo com mais detalhes (minimo 10 caracteres).';
+        erro.classList.remove('hidden');
+        return;
+      }
+      if (!activeChatId) return;
+
+      var btn = $('btnEnviarContestacao');
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+
+      google.script.run
+        .withSuccessHandler(function (response) {
+          btn.disabled = false;
+          btn.textContent = 'Enviar contestação';
+
+          if (response && response.success) {
+            var novaContestacao = { id: response.contestacao.id, status: 'Aberta', motivo: motivo };
+            var item = currentFilteredDataset[activeRowIndexInFiltered];
+            if (item) item['Contestacao'] = novaContestacao;
+            for (var i = 0; i < rawDataset.length; i++) {
+              if (rawDataset[i]['N. do chat'] === activeChatId) { rawDataset[i]['Contestacao'] = novaContestacao; break; }
+            }
+            renderContestacaoPanel(item);
+          } else {
+            erro.textContent = (response && response.error) || 'Nao foi possivel enviar a contestacao.';
+            erro.classList.remove('hidden');
+          }
+        })
+        .withFailureHandler(function (err) {
+          btn.disabled = false;
+          btn.textContent = 'Enviar contestação';
+          erro.textContent = 'Falha de comunicacao: ' + err.message;
+          erro.classList.remove('hidden');
+        })
+        .abrirContestacao(activeChatId, motivo);
+    }
+  </script>
+</body>
+</html>
