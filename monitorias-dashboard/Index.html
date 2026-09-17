@@ -356,6 +356,39 @@
       return s;
     }
 
+    // Selo de status da contestação para a lista de atendimentos (tooltip
+    // via atributo "title" nativo, sem depender de nenhuma lib extra).
+    function contestacaoTagHtml(item) {
+      var c = item['Contestacao'] || { status: 'Nenhuma' };
+      var status = c.status || 'Nenhuma';
+      if (status === 'Nenhuma') return '';
+
+      var label, klass, tooltip;
+      if (status === 'Aberta') {
+        label = 'Contestação enviada';
+        klass = 'bg-[#0A4EE4] text-white';
+        tooltip = 'Aguardando análise da Qualidade.' + (c.motivo ? ' Motivo: ' + c.motivo : '');
+      } else if (status === 'Em Análise') {
+        label = 'Em análise';
+        klass = 'bg-[#0A4EE4] text-white';
+        tooltip = 'A Qualidade está analisando esta contestação.' + (c.motivo ? ' Motivo: ' + c.motivo : '');
+      } else if (status === 'Aceita') {
+        label = 'Aceita' + (c.novaNota !== undefined && c.novaNota !== '' ? ' • nova nota ' + c.novaNota : '');
+        klass = 'bg-[#779E3D] text-white';
+        tooltip = 'Contestação aceita.' +
+          (c.novaNota !== undefined && c.novaNota !== '' ? ' Nova nota: ' + c.novaNota + '.' : '') +
+          (c.novoFeedback ? ' Novo feedback: ' + c.novoFeedback : '');
+      } else if (status === 'Recusada') {
+        label = 'Contestação não aceita';
+        klass = 'bg-[#F0A028] text-[#001647]';
+        tooltip = 'Contestação recusada.' + (c.justificativa ? ' Justificativa: ' + c.justificativa : '');
+      } else {
+        return '';
+      }
+
+      return '<span title="' + esc(tooltip) + '" class="ml-2 align-middle text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ' + klass + ' cursor-help">' + esc(label) + '</span>';
+    }
+
     // Pontos de atencao (Coluna W)
     function renderCriticalCases() {
       var section = $('criticalSection');
@@ -449,8 +482,9 @@
             lidoTd = '<td class="py-4 px-6 text-center text-xs font-bold ' + (item2['Lido'] === 'Sim' ? 'text-[#4d6b23]' : 'text-slate-400') + '">' + esc(item2['Lido']) + '</td>';
           }
           var criticoTag = item2['Critico'] ? '<span class="ml-2 align-middle text-[9px] font-black uppercase text-[#8a5a00] bg-[#F0A028]/15 px-1.5 py-0.5 rounded-full">Atencao</span>' : '';
+          var contestTag = contestacaoTagHtml(item2);
           html += '<tr class="hover:bg-[#F2F0E8]/60 cursor-pointer transition-colors duration-150" onclick="openModalByIndex(' + k + ')">' +
-            '<td class="py-4 px-6 font-bold text-[#0A4EE4] tracking-tight">' + esc(item2['N. do chat']) + criticoTag + '</td>' +
+            '<td class="py-4 px-6 font-bold text-[#0A4EE4] tracking-tight">' + esc(item2['N. do chat']) + criticoTag + contestTag + '</td>' +
             '<td class="py-4 px-6 text-slate-700">' + esc(item2['Agente']) + '</td>' +
             '<td class="py-4 px-6 text-center font-extrabold text-[#001647]">' + esc(item2['Nota'] || '-') + '</td>' +
             '<td class="py-4 px-6 text-center text-slate-500 text-xs">' + esc(item2['Data']) + '</td>' +
