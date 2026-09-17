@@ -177,6 +177,41 @@ function getDashboardData() {
   }
 }
 
+/**
+ * "N. do atendimento" NÃO é garantidamente único em Monitorias (a planilha
+ * tem linhas duplicadas com o mesmo número, de execuções/migrações
+ * antigas). Qualquer função que precise achar "a" linha de uma monitoria
+ * por esse número sozinho corre o risco de pegar a linha errada. Este
+ * helper prioriza a linha cujo e-mail bate com quem está chamando (mesmo
+ * critério que já decide, em getDashboardData(), o que cada agente vê) e
+ * só cai para a primeira ocorrência se não achar — usado por
+ * marcarComoLidoSheet, _lerMonitoriaPorChat_ e _atualizarMonitoriaRevisada_
+ * para não repetir essa lógica em cada uma.
+ *
+ * IMPORTANTE: isso resolve o problema para ações do próprio agente (onde
+ * temos o e-mail dele pela sessão). Para updateFeedbackStatusOnSheet
+ * (ação do admin, que pode não ser o dono da linha) esse desempate não se
+ * aplica — a causa raiz real é ter linhas duplicadas na planilha, e o
+ * ideal é higienizar/deduplicar "N. do atendimento" em Monitorias.
+ */
+function _encontrarLinhaMonitoria_(data, idxChat, idxEmail, chatId, preferEmail) {
+  chatId = String(chatId || '').trim();
+  preferEmail = String(preferEmail || '').trim().toLowerCase();
+  let linhaFallback = -1;
+
+  for (let i = 2; i < data.length; i++) {
+    if (String(data[i][idxChat]).trim() !== chatId) continue;
+    const rowNumber = i + 1;
+    if (linhaFallback === -1) linhaFallback = rowNumber;
+    if (preferEmail && idxEmail !== -1) {
+      const emailLinha = String(data[i][idxEmail]).trim().toLowerCase();
+      if (emailLinha === preferEmail) return rowNumber;
+    }
+  }
+
+  return linhaFallback;
+}
+
 function marcarComoLidoSheet(chatId) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -186,22 +221,29 @@ function marcarComoLidoSheet(chatId) {
     const data = sheet.getDataRange().getValues();
     const headers = data[1].map(h => String(h).trim().toLowerCase());
     const idxChat = headers.findIndex(h => h.includes('chat') || h.includes('atendimento'));
+    const idxEmail = headers.findIndex(h => h.includes('e-mail') || h.includes('email'));
 
     if (idxChat === -1) return { success: false, error: "Coluna de atendimento não encontrada." };
 
-    for (let i = 2; i < data.length; i++) {
-      if (String(data[i][idxChat]).trim() === String(chatId).trim()) {
-        sheet.getRange(i + 1, _cols_().LIDO_NUM).setValue("Sim.");
-        SpreadsheetApp.flush();
-        return { success: true, chatId: chatId, valor: "Sim." };
-      }
-    }
-    return { success: false, error: "Atendimento não localizado na planilha." };
+    const emailUsuario = Session.getActiveUser().getEmail().toLowerCase().trim();
+    const rowNumber = _encontrarLinhaMonitoria_(data, idxChat, idxEmail, chatId, emailUsuario);
+
+    if (rowNumber === -1) return { success: false, error: "Atendimento não localizado na planilha." };
+
+    sheet.getRange(rowNumber, _cols_().LIDO_NUM).setValue("Sim.");
+    SpreadsheetApp.flush();
+    return { success: true, chatId: chatId, valor: "Sim." };
   } catch (e) {
     return { success: false, error: e.message };
   }
 }
 
+// Ação do admin — não tem um e-mail de agente confiável para desempatar
+// entre linhas duplicadas de "N. do atendimento" (o admin pode estar
+// marcando a monitoria de outra pessoa). Continua com o mesmo risco
+// residual de _encontrarLinhaMonitoria_ sem preferEmail: se houver linhas
+// duplicadas, pega a primeira. A correção definitiva é deduplicar
+// "N. do atendimento" em Monitorias.
 function updateFeedbackStatusOnSheet(chatId, isChecked) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -465,16 +507,10 @@ function _mapaContestacoesPorMonitoria_() {
 }
 
 /**
- * Busca a linha da monitoria por N. do atendimento. "N. do atendimento"
- * NÃO tem garantia de unicidade na planilha (reprocessamentos/migrações
- * antigas podem ter deixado mais de uma linha com o mesmo número, de
- * agentes diferentes). Por isso, quando `preferEmail` é informado, damos
- * prioridade à linha cujo e-mail bate com quem está chamando — é a mesma
- * linha que o RLS de getDashboardData() já usou para decidir se essa
- * pessoa podia ver esta monitoria. Sem isso, uma linha duplicada de outro
- * agente poderia ser lida primeiro e bloquear indevidamente o dono real.
- * Se nenhuma linha bater com preferEmail, cai no fallback (1ª ocorrência),
- * mantendo o comportamento original para quem chama sem e-mail (ex.: admin).
+ * Busca a linha da monitoria por N. do atendimento, usando
+ * _encontrarLinhaMonitoria_ para priorizar a linha de `preferEmail`
+ * quando houver mais de uma linha com o mesmo número (ver comentário
+ * daquele helper).
  */
 function _lerMonitoriaPorChat_(chatId, preferEmail) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -492,28 +528,20 @@ function _lerMonitoriaPorChat_(chatId, preferEmail) {
 
   if (idxChat === -1) return null;
 
-  preferEmail = String(preferEmail || '').trim().toLowerCase();
-  let fallback = null;
+  const rowNumber = _encontrarLinhaMonitoria_(data, idxChat, idxEmail, chatId, preferEmail);
+  if (rowNumber === -1) return null;
 
-  for (let i = 2; i < data.length; i++) {
-    if (String(data[i][idxChat]).trim() !== String(chatId).trim()) continue;
-
-    const registro = {
-      agente: idxAgente !== -1 ? String(data[i][idxAgente]).trim() : '',
-      nota: idxNota !== -1 ? data[i][idxNota] : '',
-      feedback: idxFeedback !== -1 ? data[i][idxFeedback] : '',
-      oportunidades: idxOportunidades !== -1 ? data[i][idxOportunidades] : '',
-      emailLinha: idxEmail !== -1 ? String(data[i][idxEmail]).trim().toLowerCase() : ''
-    };
-
-    if (preferEmail && registro.emailLinha === preferEmail) return registro;
-    if (!fallback) fallback = registro;
-  }
-
-  return fallback;
+  const row = data[rowNumber - 1];
+  return {
+    agente: idxAgente !== -1 ? String(row[idxAgente]).trim() : '',
+    nota: idxNota !== -1 ? row[idxNota] : '',
+    feedback: idxFeedback !== -1 ? row[idxFeedback] : '',
+    oportunidades: idxOportunidades !== -1 ? row[idxOportunidades] : '',
+    emailLinha: idxEmail !== -1 ? String(row[idxEmail]).trim().toLowerCase() : ''
+  };
 }
 
-function _atualizarMonitoriaRevisada_(chatId, novaNota, novoFeedback, novasOportunidades) {
+function _atualizarMonitoriaRevisada_(chatId, novaNota, novoFeedback, novasOportunidades, preferEmail) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Monitorias');
   if (!sheet) return false;
@@ -521,27 +549,25 @@ function _atualizarMonitoriaRevisada_(chatId, novaNota, novoFeedback, novasOport
   const data = sheet.getDataRange().getValues();
   const headers = data[1].map(h => String(h).trim().toLowerCase());
   const idxChat = headers.findIndex(h => h.includes('chat') || h.includes('atendimento'));
+  const idxEmail = headers.findIndex(h => h.includes('e-mail') || h.includes('email'));
   const idxNota = headers.findIndex(h => h.includes('nota'));
   const idxFeedback = headers.findIndex(h => h === 'feedback');
   const idxOportunidades = headers.findIndex(h => h.includes('oportunidades'));
 
   if (idxChat === -1) return false;
 
-  for (let i = 2; i < data.length; i++) {
-    if (String(data[i][idxChat]).trim() === String(chatId).trim()) {
-      const rowNumber = i + 1;
-      // Escreve sempre na mesma célula "Feedback" que o n8n usa: isso é o
-      // que garante que o n8n nunca mais reprocessará esta linha (seu Filter
-      // já ignora qualquer linha com Feedback preenchido).
-      if (idxNota !== -1) sheet.getRange(rowNumber, idxNota + 1).setValue(novaNota);
-      if (idxFeedback !== -1) sheet.getRange(rowNumber, idxFeedback + 1).setValue(novoFeedback);
-      if (idxOportunidades !== -1 && novasOportunidades) {
-        sheet.getRange(rowNumber, idxOportunidades + 1).setValue(novasOportunidades);
-      }
-      return true;
-    }
+  const rowNumber = _encontrarLinhaMonitoria_(data, idxChat, idxEmail, chatId, preferEmail);
+  if (rowNumber === -1) return false;
+
+  // Escreve sempre na mesma célula "Feedback" que o n8n usa: isso é o que
+  // garante que o n8n nunca mais reprocessará esta linha (seu Filter já
+  // ignora qualquer linha com Feedback preenchido).
+  if (idxNota !== -1) sheet.getRange(rowNumber, idxNota + 1).setValue(novaNota);
+  if (idxFeedback !== -1) sheet.getRange(rowNumber, idxFeedback + 1).setValue(novoFeedback);
+  if (idxOportunidades !== -1 && novasOportunidades) {
+    sheet.getRange(rowNumber, idxOportunidades + 1).setValue(novasOportunidades);
   }
-  return false;
+  return true;
 }
 
 /**
@@ -691,7 +717,7 @@ function decidirContestacao(contestacaoId, decisao, justificativa, novaNota, nov
       }
       sheet.getRange(row, map['data da revisão'] + 1).setValue(agora);
 
-      const atualizouMonitoria = _atualizarMonitoriaRevisada_(registro.idMonitoria, notaFinal, feedbackFinal, oportunidadesFinal);
+      const atualizouMonitoria = _atualizarMonitoriaRevisada_(registro.idMonitoria, notaFinal, feedbackFinal, oportunidadesFinal, registro.emailAgente);
       if (!atualizouMonitoria) {
         return {
           success: true,
