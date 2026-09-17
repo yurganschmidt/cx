@@ -544,7 +544,10 @@ function _lerMonitoriaPorChat_(chatId, preferEmail) {
 function _atualizarMonitoriaRevisada_(chatId, novaNota, novoFeedback, novasOportunidades, preferEmail) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('Monitorias');
-  if (!sheet) return false;
+  if (!sheet) {
+    Logger.log('_atualizarMonitoriaRevisada_: aba Monitorias não encontrada');
+    return false;
+  }
 
   const data = sheet.getDataRange().getValues();
   const headers = data[1].map(h => String(h).trim().toLowerCase());
@@ -554,9 +557,13 @@ function _atualizarMonitoriaRevisada_(chatId, novaNota, novoFeedback, novasOport
   const idxFeedback = headers.findIndex(h => h === 'feedback');
   const idxOportunidades = headers.findIndex(h => h.includes('oportunidades'));
 
+  Logger.log('_atualizarMonitoriaRevisada_: chatId=%s idxChat=%s idxNota=%s idxFeedback=%s idxOportunidades=%s idxEmail=%s preferEmail=%s headers=%s',
+    chatId, idxChat, idxNota, idxFeedback, idxOportunidades, idxEmail, preferEmail, JSON.stringify(headers));
+
   if (idxChat === -1) return false;
 
   const rowNumber = _encontrarLinhaMonitoria_(data, idxChat, idxEmail, chatId, preferEmail);
+  Logger.log('_atualizarMonitoriaRevisada_: linha encontrada para chatId=%s -> rowNumber=%s', chatId, rowNumber);
   if (rowNumber === -1) return false;
 
   // Escreve sempre na mesma célula "Feedback" que o n8n usa: isso é o que
@@ -567,6 +574,7 @@ function _atualizarMonitoriaRevisada_(chatId, novaNota, novoFeedback, novasOport
   if (idxOportunidades !== -1 && novasOportunidades) {
     sheet.getRange(rowNumber, idxOportunidades + 1).setValue(novasOportunidades);
   }
+  Logger.log('_atualizarMonitoriaRevisada_: escrita concluída na linha %s (idxNota=%s valor=%s)', rowNumber, idxNota, novaNota);
   return true;
 }
 
@@ -678,6 +686,8 @@ function decidirContestacao(contestacaoId, decisao, justificativa, novaNota, nov
 
     const sheet = _getOrCreateContestacoesSheet_();
     const registro = _buscarContestacaoPorId_(sheet, contestacaoId);
+    Logger.log('decidirContestacao: id=%s decisao=%s registroEncontrado=%s idMonitoria=%s statusAtual=%s emailAgente=%s',
+      contestacaoId, decisao, !!registro, registro && registro.idMonitoria, registro && registro.status, registro && registro.emailAgente);
     if (!registro) return { success: false, error: 'Contestação não encontrada.' };
     if (registro.status === 'Aceita' || registro.status === 'Recusada') {
       return {
@@ -718,6 +728,8 @@ function decidirContestacao(contestacaoId, decisao, justificativa, novaNota, nov
       sheet.getRange(row, map['data da revisão'] + 1).setValue(agora);
 
       const atualizouMonitoria = _atualizarMonitoriaRevisada_(registro.idMonitoria, notaFinal, feedbackFinal, oportunidadesFinal, registro.emailAgente);
+      Logger.log('decidirContestacao: _atualizarMonitoriaRevisada_(idMonitoria=%s, notaFinal=%s) retornou %s',
+        registro.idMonitoria, notaFinal, atualizouMonitoria);
       if (!atualizouMonitoria) {
         return {
           success: true,
