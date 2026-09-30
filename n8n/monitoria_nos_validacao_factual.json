@@ -2,7 +2,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Validação factual (etapa 2)\nLigar a saída **done** do nó **Loop** (a de cima, hoje vazia) na entrada de **Ler Planilha Validação**. Nenhuma outra ligação do fluxo atual é alterada.\n\nPré-requisito: criar na planilha Monitorias, linha 2, os cabeçalhos **Status Factual**, **Divergências Factuais** e **Fontes (base oficial)** nas colunas livres depois de 'Data do feedback ao agente'.",
+        "content": "## Validação factual (etapa 2)\nLigar a saída **done** do nó **Loop** (a de cima, hoje vazia) na entrada de **Ler Planilha Validação**. Nenhuma outra ligação do fluxo atual é alterada.\n\nPré-requisito: criar na planilha Monitorias, linha 2, os cabeçalhos **Status Factual**, **Divergências Factuais** e **Fontes (base oficial)** nas colunas livres depois da última coluna da planilha (Y, Z e AA, depois de 'Ciclo').",
         "height": 260,
         "width": 520
       },
@@ -31,7 +31,7 @@
           "dataLocationOnSheet": {
             "values": {
               "rangeDefinition": "specifyRangeA1",
-              "range": "B2:Z"
+              "range": "B2:AC"
             }
           }
         }
