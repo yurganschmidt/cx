@@ -1,0 +1,435 @@
+{
+  "name": "Base Oficial ERP - Indexação (Drive → Supabase)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "id": "1e8146c1-3471-4705-88ad-27b29ae54dc4",
+      "name": "Todo dia 05h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "2a4ae75d-65ba-4980-99f3-edf238eb6ce1",
+      "name": "Reindexar tudo (manual)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "operation": "search",
+        "returnAll": true,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "COLE_AQUI_O_ID_DA_PASTA_Bases_de_ERP_CXpert"
+          },
+          "whatToSearch": "files"
+        },
+        "options": {
+          "fields": [
+            "id",
+            "name",
+            "mimeType",
+            "modifiedTime",
+            "webViewLink"
+          ]
+        }
+      },
+      "id": "b6c6004e-55c6-4789-a40c-c7ec1b4f8a26",
+      "name": "Listar Docs da pasta",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        260,
+        100
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "TROCAR",
+          "name": "Google Drive (trocar)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Em execução manual (teste) reindexa tudo; no agendamento, só o que mudou nas últimas 26h.\nconst manual = $execution.mode === 'test';\nconst cutoff = Date.now() - 26 * 3600 * 1000;\nreturn $input.all().filter(i =>\n  i.json.mimeType === 'application/vnd.google-apps.document' &&\n  (manual || new Date(i.json.modifiedTime).getTime() > cutoff)\n);"
+      },
+      "id": "b7e3667d-1d73-4fc5-b5d4-4886aa16b9d7",
+      "name": "Selecionar docs alterados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2ef81703-570f-4fd0-be5b-8ced74cd4d76",
+      "name": "Loop Over Files",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        740,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.id }}/export?mimeType=text/markdown",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "e0545f69-6102-480e-beb4-6a0232d40ddf",
+      "name": "Exportar Doc (markdown)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        120
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "TROCAR",
+          "name": "Google Drive (trocar)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://SEU-PROJETO.supabase.co/rest/v1/rpc/delete_by_file",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_file_id: $('Loop Over Files').item.json.id }) }}",
+        "options": {}
+      },
+      "id": "37175ff3-5e2b-4bb9-b0bb-16c436304ed8",
+      "name": "Apagar vetores antigos do Doc",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        120
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "TROCAR",
+          "name": "Supabase (trocar)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const file = $('Loop Over Files').item.json;\nlet md = $('Exportar Doc (markdown)').item.json.data || '';\n\n// Remove imagens (o export do Docs embute base64 gigante) e links de imagem.\nmd = md.replace(/\\r/g, '')\n       .replace(/^\\[[^\\]]+\\]:\\s*<?data:image[^\\n]*$/gim, '')\n       .replace(/!\\[[^\\]]*\\]\\[[^\\]]*\\]/g, '')\n       .replace(/!\\[[^\\]]*\\]\\([^)]*\\)/g, '');\n\nconst MAX = 1000;\nconst base = file.name;\n\n// 1) Quebra por títulos, guardando o caminho (H1 > H2 > H3)\nconst sections = [];\nlet path = [];\nlet buf = [];\nconst flush = () => {\n  const t = buf.join('\\n').trim();\n  if (t) sections.push({ secao: path.filter(Boolean).join(' > '), text: t });\n  buf = [];\n};\nfor (const line of md.split('\\n')) {\n  const m = line.match(/^(#{1,6})\\s+(.*)$/);\n  if (m) {\n    flush();\n    const lvl = m[1].length;\n    path = path.slice(0, lvl - 1);\n    path[lvl - 1] = m[2].trim().replace(/[*_`\\\\]/g, '');\n  } else {\n    buf.push(line);\n  }\n}\nflush();\n\n// 2) Quebra seções longas por parágrafo (<= MAX caracteres), com prefixo de contexto\nconst out = [];\nfor (const s of sections) {\n  const prefix = `[${base}${s.secao ? ' > ' + s.secao : ''}]\\n`;\n  const pieces = [];\n  let cur = '';\n  for (const para of s.text.split(/\\n{2,}/)) {\n    if (para.length > MAX) {\n      if (cur) { pieces.push(cur); cur = ''; }\n      for (let i = 0; i < para.length; i += MAX - 100) pieces.push(para.slice(i, i + MAX));\n    } else if ((cur + '\\n\\n' + para).length > MAX && cur) {\n      pieces.push(cur);\n      cur = para;\n    } else {\n      cur = cur ? cur + '\\n\\n' + para : para;\n    }\n  }\n  if (cur) pieces.push(cur);\n  for (const p of pieces) {\n    if (p.trim().length < 40) continue;\n    out.push({ json: {\n      text: prefix + p.trim(),\n      file_id: file.id,\n      base,\n      secao: s.secao,\n      modified: file.modifiedTime,\n      url: file.webViewLink || `https://docs.google.com/document/d/${file.id}/edit`\n    }});\n  }\n}\nif (!out.length) return [{ json: { text: `[${base}] (documento sem texto indexável)`, file_id: file.id, base, secao: '', modified: file.modifiedTime, url: '' } }];\nreturn out;"
+      },
+      "id": "1c3507da-4128-49c2-be9b-96e4dca0c252",
+      "name": "Dividir em trechos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1480,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "id": "ee89b108-6a58-4d32-9be1-56ea20a438a0",
+      "name": "Supabase Vector Store (inserir)",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        1720,
+        120
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "TROCAR",
+          "name": "Supabase (trocar)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.text }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "file_id",
+                "value": "={{ $json.file_id }}"
+              },
+              {
+                "name": "base",
+                "value": "={{ $json.base }}"
+              },
+              {
+                "name": "secao",
+                "value": "={{ $json.secao }}"
+              },
+              {
+                "name": "modified",
+                "value": "={{ $json.modified }}"
+              },
+              {
+                "name": "url",
+                "value": "={{ $json.url }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "de27bead-619e-4f44-b956-e113f06a5c1a",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "chunkSize": 1500,
+        "chunkOverlap": 0
+      },
+      "id": "652f315a-814c-43c4-91ec-9ec35b3f157e",
+      "name": "Text Splitter (passthrough)",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "id": "c6d9639c-36b2-45e2-8d0a-bbbb18089d81",
+      "name": "Embeddings Google Gemini",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        360
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2qywlVdWZkatoXga",
+          "name": "TRIO 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true } }];"
+      },
+      "id": "35b7851c-d784-4e1a-a878-e69da2c0a9f6",
+      "name": "Fim do arquivo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Todo dia 05h": {
+      "main": [
+        [
+          {
+            "node": "Listar Docs da pasta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reindexar tudo (manual)": {
+      "main": [
+        [
+          {
+            "node": "Listar Docs da pasta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Docs da pasta": {
+      "main": [
+        [
+          {
+            "node": "Selecionar docs alterados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Selecionar docs alterados": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Files": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Exportar Doc (markdown)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exportar Doc (markdown)": {
+      "main": [
+        [
+          {
+            "node": "Apagar vetores antigos do Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apagar vetores antigos do Doc": {
+      "main": [
+        [
+          {
+            "node": "Dividir em trechos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dividir em trechos": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store (inserir)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store (inserir)": {
+      "main": [
+        [
+          {
+            "node": "Fim do arquivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fim do arquivo": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store (inserir)",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store (inserir)",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Splitter (passthrough)": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

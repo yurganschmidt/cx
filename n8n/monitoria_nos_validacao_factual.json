@@ -1,0 +1,458 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Validação factual (etapa 2)\nLigar a saída **done** do nó **Loop** (a de cima, hoje vazia) na entrada de **Ler Planilha Validação**. Nenhuma outra ligação do fluxo atual é alterada.\n\nPré-requisito: criar na planilha Monitorias, linha 2, os cabeçalhos **Status Factual**, **Divergências Factuais** e **Fontes (base oficial)** nas colunas livres depois de 'Data do feedback ao agente'.",
+        "height": 260,
+        "width": 520
+      },
+      "id": "ebbbcf45-c8d9-4942-858f-bea0f0915b90",
+      "name": "Sticky Note Validação",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5696,
+        1800
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1V2jGv1MEJBtKgjbCz3Q-krV1ccoij4NizSju_orB30Q",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Monitorias",
+          "mode": "name"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRangeA1",
+              "range": "B2:Z"
+            }
+          }
+        }
+      },
+      "id": "c5450572-7f7b-4e5e-83a6-be8c213087b1",
+      "name": "Ler Planilha Validação",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        5728,
+        2112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5mCHhHRaLUPVT2dd",
+          "name": "Google Sheets Trio 04"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4d3e3d43-ea0b-475f-a793-a6f90f809110",
+              "leftValue": "={{ !!$json[\"Feedback\"] && !!$json[\"Conversa\"] && $json[\"Semana\"] === ($now.weekNumber + \"ª semana\") && (!$json[\"Status Factual\"] || String($json[\"Status Factual\"]).startsWith(\"Erro\")) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "31168245-f2fc-4bd5-a510-1ea7bafc74c9",
+      "name": "Pendentes de validação",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        5952,
+        2112
+      ]
+    },
+    {
+      "parameters": {
+        "maxItems": 200
+      },
+      "id": "1f0cbc42-1679-4f70-9fd8-30a974588a78",
+      "name": "Limitar lote",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        6176,
+        2112
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "ef445b51-9dec-48d6-a6eb-9eb15ffba0be",
+      "name": "Loop Validação",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        6400,
+        2112
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ \"DADOS DO ATENDIMENTO:\\n\" +\n   \"- Agente: \" + $json[\"Agente\"] + \"\\n\" +\n   \"- Número do Chat: \" + $json[\"N. do atendimento\"] + \"\\n\" +\n   \"- Contexto do Contato: \" + $json[\"Sobre o que deseja falar\"] + \"\\n\" +\n   \"- Motivo do Contato: \" + $json[\"Motivo do contato\"] + \"\\n\" +\n   \"- Submotivo: \" + $json[\"Submotivo do contato\"] + \"\\n\\n\" +\n   \"CONVERSA DO ATENDIMENTO:\\n\" + $json[\"Conversa\"] }}",
+        "options": {
+          "systemMessage": "# AUDITORIA FACTUAL E PROCESSUAL (camada adicional à monitoria de qualidade)\n\nVocê é um Auditor de Conformidade Factual e Processual de atendimentos de suporte ERP. Sua única tarefa é verificar se as informações factuais e processuais passadas pelo AGENT ao cliente estão de acordo com a BASE OFICIAL, que só pode ser consultada pela ferramenta base_oficial_erp.\n\nVocê NÃO avalia tom de voz, empatia, condução, CSAT, abertura, encerramento ou qualidade do atendimento. Isso já é feito por outra etapa e não deve aparecer na sua resposta.\n\n### PROCESSO\n1. Leia a conversa. O cliente é ENDEUSER e o agente é AGENT. Nunca atribua ao agente algo dito pelo cliente. Se houver mais de um AGENT (transferência, agente de IA interno), considere apenas o que foi dito por agentes humanos da equipe e sinalize a ambiguidade no campo divergencias somente se ela afetar a verificação.\n2. Extraia as afirmações do AGENT que sejam verificáveis: prazos, regras de negócio, caminhos de tela ou menu, parâmetros, comportamento do ERP, regras fiscais, integrações, limites e versões. Ignore saudações, perguntas, pedidos de print, opiniões, promessas de retorno e comentários sobre sistemas de terceiros que a base não trata.\n3. Para cada afirmação relevante (no máximo 6, priorize as de maior impacto para o cliente), consulte a base com uma consulta curta e específica. Se os trechos vierem fracos, reformule a consulta uma única vez.\n4. Compare a afirmação com os trechos recuperados.\n\n### REGRAS\n- Só use Divergente quando um trecho recuperado contradiz explicitamente o que o agente afirmou. Cite a base e a seção.\n- Se a base não trata do assunto, ou os trechos forem ambíguos ou insuficientes, o resultado é Sem base. Isso nunca é erro do agente.\n- Se a base indicar que a regra depende de versão, data de vigência, time ou cenário e a conversa não permitir saber qual se aplica, use Parcial.\n- Nunca use conhecimento próprio para confirmar ou negar algo. Só vale o que a base retornou.\n- Nunca invente contexto. Nunca infira ações que não aparecem na conversa. Uma afirmação que não está na transcrição não existe.\n- Se o agente apenas orientou o caminho correto, ele está Conforme mesmo que não tenha explicado o motivo.\n\n### STATUS GERAL (status_factual), escolha exatamente um\n- Conforme: todas as afirmações verificadas batem com a base.\n- Parcial: nenhuma contradição clara, mas há afirmação incompleta, dependente de versão ou apenas parcialmente coberta.\n- Divergente: pelo menos uma afirmação contradiz a base.\n- Sem base: havia afirmações verificáveis, mas a base não cobre nenhuma delas.\n- Sem afirmações verificáveis: o agente não fez afirmações factuais ou processuais no atendimento.\n\n### FORMATO DE SAÍDA\nRetorne EXCLUSIVAMENTE um objeto JSON puro, sem markdown e sem texto antes ou depois, com os campos status_factual, divergencias e fontes.\n- divergencias: cada item no formato: Agente disse 'X' mas a base diz 'Y' (Base > Seção). Use o texto exato: Nenhuma divergência identificada quando não houver. Para Parcial ou Sem base, descreva em um item o que não pôde ser confirmado.\n- fontes: as bases e seções consultadas que sustentam a conclusão, no formato Base > Seção.\n- Separe os itens de cada campo com o delimitador ' | ' (espaço, barra vertical, espaço). Máximo de 5 itens por campo.\n- Não use quebras de linha reais, listas, markdown nem aspas duplas dentro dos valores. Para citar falas use aspas simples.\n\nExemplo: {\"status_factual\": \"Divergente\", \"divergencias\": \"Agente disse 'compensação em 5 dias úteis' mas a base diz 'até 3 dias úteis' (Base financeiro > Boleto > Compensação)\", \"fontes\": \"Base financeiro > Boleto > Compensação\"}",
+          "maxIterations": 8
+        }
+      },
+      "id": "51ad00ec-1f54-4e7d-871a-8b5bffac4da2",
+      "name": "Validação Factual (Agent)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        6672,
+        2080
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {
+          "maxOutputTokens": 4096,
+          "temperature": 0
+        }
+      },
+      "id": "fce11f59-5e8a-4ad8-af6f-d5871c2a6d8a",
+      "name": "Google Gemini Chat Model Validação",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        6592,
+        2360
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2qywlVdWZkatoXga",
+          "name": "TRIO 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "base_oficial_erp",
+        "toolDescription": "Consulta a base oficial de processos, regras de negócio, fiscal, financeiro, integrações, estoque, pedidos, multiempresa e versões do ERP. Use uma consulta curta e específica por afirmação a ser verificada. Retorna trechos com base e seção de origem.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "topK": 5,
+        "includeDocumentMetadata": true,
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "id": "5bffc491-acd5-4533-b020-0fbb66f755c9",
+      "name": "Base Oficial ERP (Supabase)",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        6800,
+        2360
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "TROCAR",
+          "name": "Supabase (trocar)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "id": "8b02ee6f-ab8c-42b7-9ac7-7e32f8d03028",
+      "name": "Embeddings Google Gemini Validação",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        6800,
+        2560
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "2qywlVdWZkatoXga",
+          "name": "TRIO 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ALLOWED = ['Conforme', 'Parcial', 'Divergente', 'Sem base', 'Sem afirmações verificáveis'];\nconst clean = (s) => String(s || '').replace(/\\s*\\n+\\s*/g, ' | ').replace(/\"/g, \"'\").trim().slice(0, 2000);\n\nreturn $input.all().map(item => {\n  const raw = item.json.output || item.json.text || '';\n  let status = 'Erro na validação';\n  let divergencias = '';\n  let fontes = '';\n\n  if (item.json.error && !raw) {\n    divergencias = 'Falha na consulta à base oficial: ' + clean(item.json.error.message || item.json.error);\n  } else {\n    try {\n      const m = String(raw).match(/\\{[\\s\\S]*\\}/);\n      if (!m) throw new Error('sem JSON');\n      const p = JSON.parse(m[0]);\n      status = ALLOWED.includes(p.status_factual) ? p.status_factual : 'Erro na validação';\n      divergencias = clean(p.divergencias);\n      fontes = clean(p.fontes);\n    } catch (e) {\n      // Fallback por regex se a resposta vier truncada\n      const s = String(raw).match(/\"status_factual\"\\s*:\\s*\"([^\"]+)\"/);\n      const d = String(raw).match(/\"divergencias\"\\s*:\\s*\"([\\s\\S]*?)\"\\s*,\\s*\"fontes\"/);\n      const f = String(raw).match(/\"fontes\"\\s*:\\s*\"([\\s\\S]*?)\"?\\s*\\}?\\s*$/);\n      if (s && ALLOWED.includes(s[1])) status = s[1];\n      divergencias = d ? clean(d[1]) : 'Não foi possível extrair estruturado. Texto bruto: ' + clean(raw);\n      fontes = f ? clean(f[1]) : '';\n    }\n  }\n  return { json: { status_factual: status, divergencias, fontes } };\n});"
+      },
+      "id": "d67c4d03-7271-45fc-8517-b6b09389da9b",
+      "name": "Code Validação",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7040,
+        2080
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1V2jGv1MEJBtKgjbCz3Q-krV1ccoij4NizSju_orB30Q"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 207170881,
+          "mode": "list",
+          "cachedResultName": "Monitorias",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1V2jGv1MEJBtKgjbCz3Q-krV1ccoij4NizSju_orB30Q/edit#gid=207170881"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "N. do atendimento": "={{ $('Loop Validação').item.json[\"N. do atendimento\"] }}",
+            "Status Factual": "={{ $json.status_factual }}",
+            "Divergências Factuais": "={{ $json.divergencias }}",
+            "Fontes (base oficial)": "={{ $json.fontes }}"
+          },
+          "matchingColumns": [
+            "N. do atendimento"
+          ],
+          "schema": [
+            {
+              "id": "N. do atendimento",
+              "displayName": "N. do atendimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status Factual",
+              "displayName": "Status Factual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Divergências Factuais",
+              "displayName": "Divergências Factuais",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Fontes (base oficial)",
+              "displayName": "Fontes (base oficial)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "locationDefine": {
+            "values": {
+              "headerRow": 2,
+              "firstDataRow": 3
+            }
+          }
+        }
+      },
+      "id": "fac30f83-0dee-4368-857a-3c5534472397",
+      "name": "Salvar Validação",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        7264,
+        2080
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5mCHhHRaLUPVT2dd",
+          "name": "Google Sheets Trio 04"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "cb748f51-ad60-45db-ab42-9ff648c16a4c",
+      "name": "Aguarda 2 segundos Validação",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        7488,
+        2080
+      ],
+      "webhookId": "a95b6c8e-7149-4ec0-9777-5c663476e937"
+    }
+  ],
+  "connections": {
+    "Ler Planilha Validação": {
+      "main": [
+        [
+          {
+            "node": "Pendentes de validação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pendentes de validação": {
+      "main": [
+        [
+          {
+            "node": "Limitar lote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limitar lote": {
+      "main": [
+        [
+          {
+            "node": "Loop Validação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Validação": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Validação Factual (Agent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validação Factual (Agent)": {
+      "main": [
+        [
+          {
+            "node": "Code Validação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Validação": {
+      "main": [
+        [
+          {
+            "node": "Salvar Validação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Validação": {
+      "main": [
+        [
+          {
+            "node": "Aguarda 2 segundos Validação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aguarda 2 segundos Validação": {
+      "main": [
+        [
+          {
+            "node": "Loop Validação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model Validação": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Validação Factual (Agent)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Base Oficial ERP (Supabase)": {
+      "ai_tool": [
+        [
+          {
+            "node": "Validação Factual (Agent)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini Validação": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Base Oficial ERP (Supabase)",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}
